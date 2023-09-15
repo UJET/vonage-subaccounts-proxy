@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "@vonage/vcr-sdk": "^1.1.1",
+    "axios": "^1.5.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "name": "vonage-subaccount-api-proxy",
+  "description": "",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "devDependencies": {},
+  "scripts": {
+    "start": "node index.js",
+    "debug": "vcr debug"
+  },
+  "keywords": [],
+  "author": "Kitt Phi & Mark Berkland",
+  "license": "ISC"
+}

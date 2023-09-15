@@ -1,0 +1,493 @@
+{
+	"info": {
+		"_postman_id": "3783a518-545b-401e-ac60-0080bae7b407",
+		"name": "vcr-account-proxy for UJET Demo",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9277659"
+	},
+	"item": [
+		{
+			"name": "get-subkey",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{VCR_URL}}/get-subkey/:subkey",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"get-subkey",
+						":subkey"
+					],
+					"variable": [
+						{
+							"key": "subkey",
+							"value": "{{SUBKEY}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DELETE",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": {{NAME}},\n    \"secret\": {{SECRET}}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{VCR_URL}}/account/:apikey/subaccounts/:subkey",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"account",
+						":apikey",
+						"subaccounts",
+						":subkey"
+					],
+					"variable": [
+						{
+							"key": "apikey",
+							"value": ""
+						},
+						{
+							"key": "subkey",
+							"value": "{{SUBKEY}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET FREE",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": {{NAME}},\n    \"secret\": {{SECRET}}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{VCR_URL}}/account/:apikey/subaccounts",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"account",
+						":apikey",
+						"subaccounts"
+					],
+					"variable": [
+						{
+							"key": "apikey",
+							"value": "{{APIKEY}}"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "getkey",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": {{NAME}},\n    \"secret\": {{SECRET}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{VCR_URL}}/account/:apikey/subaccounts",
+							"host": [
+								"{{VCR_URL}}"
+							],
+							"path": [
+								"account",
+								":apikey",
+								"subaccounts"
+							],
+							"variable": [
+								{
+									"key": "apikey",
+									"value": "{{APIKEY}}"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-length",
+							"value": "238"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "date",
+							"value": "Wed, 13 Sep 2023 22:56:04 GMT"
+						},
+						{
+							"key": "etag",
+							"value": "W/\"ee-kjHfWv/DjHf58XhjcEEGW8OTkWE\""
+						},
+						{
+							"key": "x-powered-by",
+							"value": "Express"
+						},
+						{
+							"key": "x-envoy-attempt-count",
+							"value": "1"
+						},
+						{
+							"key": "x-envoy-upstream-service-time",
+							"value": "640"
+						},
+						{
+							"key": "server",
+							"value": "envoy"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"api_key\": \"aaaaa\",\n    \"secret\": \"zzzzz\",\n    \"primary_account_api_key\": \"AAAAA\",\n    \"use_primary_account_balance\": true,\n    \"name\": \"Vonage - Mark\",\n    \"balance\": null,\n    \"credit_limit\": null,\n    \"suspended\": false,\n    \"created_at\": \"2023-09-14T15:34:11.353Z\",\n    \"signature_secret\": \"\"\n}"
+				}
+			]
+		},
+		{
+			"name": "set-mainkey",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n    {\n        \"name\": \"Google OEM Demo (current)\",\n        \"apikey\": \"111111\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Google OEM Demo (next)\",\n        \"apikey\": \"2222222\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Production\",\n        \"apikey\": \"3333333\",\n        \"pool\": false,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Vonage - Mark\",\n        \"apikey\": \"444444\",\n        \"pool\": true,\n        \"max\": 10000\n    }\n]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{VCR_URL}}/set-mainkeys",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"set-mainkeys"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "set-mainkey",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"name\": \"Google OEM Demo (current)\",\n        \"apikey\": \"111111\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Google OEM Demo (next)\",\n        \"apikey\": \"2222222\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Production\",\n        \"apikey\": \"3333333\",\n        \"pool\": false,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Vonage - Mark\",\n        \"apikey\": \"444444\",\n        \"pool\": true,\n        \"max\": 10000\n    }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{VCR_URL}}/set-mainkeys",
+							"host": [
+								"{{VCR_URL}}"
+							],
+							"path": [
+								"set-mainkeys"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-length",
+							"value": "296"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "date",
+							"value": "Tue, 12 Sep 2023 16:45:01 GMT"
+						},
+						{
+							"key": "etag",
+							"value": "W/\"128-bK3gfIbkk59SK60uBHI08kJJ6Yw\""
+						},
+						{
+							"key": "x-powered-by",
+							"value": "Express"
+						},
+						{
+							"key": "x-envoy-attempt-count",
+							"value": "1"
+						},
+						{
+							"key": "x-envoy-upstream-service-time",
+							"value": "18"
+						},
+						{
+							"key": "server",
+							"value": "envoy"
+						}
+					],
+					"cookie": [],
+					"body": "[\n    {\n        \"name\": \"Google OEM Demo (current)\",\n        \"apikey\": \"111111\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Google OEM Demo (next)\",\n        \"apikey\": \"2222222\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Production\",\n        \"apikey\": \"3333333\",\n        \"pool\": false,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Vonage - Mark\",\n        \"apikey\": \"444444\",\n        \"pool\": true,\n        \"max\": 10000\n    }\n]"
+				}
+			]
+		},
+		{
+			"name": "get-mainkeys",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{VCR_URL}}/get-mainkeys",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"get-mainkeys"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "get-mainkeys",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{VCR_URL}}/get-mainkeys",
+							"host": [
+								"{{VCR_URL}}"
+							],
+							"path": [
+								"get-mainkeys"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-length",
+							"value": "296"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "date",
+							"value": "Tue, 12 Sep 2023 16:55:36 GMT"
+						},
+						{
+							"key": "etag",
+							"value": "W/\"128-bK3gfIbkk59SK60uBHI08kJJ6Yw\""
+						},
+						{
+							"key": "x-powered-by",
+							"value": "Express"
+						},
+						{
+							"key": "x-envoy-attempt-count",
+							"value": "1"
+						},
+						{
+							"key": "x-envoy-upstream-service-time",
+							"value": "346"
+						},
+						{
+							"key": "server",
+							"value": "envoy"
+						}
+					],
+					"cookie": [],
+					"body": "[\n    {\n        \"name\": \"Google OEM Demo (current)\",\n        \"apikey\": \"111111\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Google OEM Demo (next)\",\n        \"apikey\": \"2222222\",\n        \"pool\": true,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Production\",\n        \"apikey\": \"3333333\",\n        \"pool\": false,\n        \"max\": 10000\n    },\n    {\n        \"name\": \"Vonage - Mark\",\n        \"apikey\": \"444444\",\n        \"pool\": true,\n        \"max\": 10000\n    }\n]"
+				}
+			]
+		},
+		{
+			"name": "get-index",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{VCR_URL}}/get-index/:apikey",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"get-index",
+						":apikey"
+					],
+					"variable": [
+						{
+							"key": "apikey",
+							"value": "{{APIKEY}}"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "get-index",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{VCR_URL}}/get-index/:apikey",
+							"host": [
+								"{{VCR_URL}}"
+							],
+							"path": [
+								"get-index",
+								":apikey"
+							],
+							"variable": [
+								{
+									"key": "apikey",
+									"value": "{{APIKEY}}"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-length",
+							"value": "71"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "date",
+							"value": "Thu, 14 Sep 2023 00:20:14 GMT"
+						},
+						{
+							"key": "etag",
+							"value": "W/\"47-LBF+OXCyAzRrIUHeVmvKAGVAIsE\""
+						},
+						{
+							"key": "x-powered-by",
+							"value": "Express"
+						},
+						{
+							"key": "x-envoy-attempt-count",
+							"value": "1"
+						},
+						{
+							"key": "x-envoy-upstream-service-time",
+							"value": "586"
+						},
+						{
+							"key": "server",
+							"value": "envoy"
+						}
+					],
+					"cookie": [],
+					"body": "[\n    {\n        \"api_key\": \"aaaaa\",\n        \"used\": true\n    },\n    {\n        \"api_key\": \"bbbbb\",\n        \"used\": true\n    }\n]"
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "VCR_URL",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "APIKEY",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "SECRET",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "NAME",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "SUBKEY",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

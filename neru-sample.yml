@@ -1,0 +1,11 @@
+project:
+  name: UPDATE_ME
+instance:
+  name: UPDATE_ME
+  runtime: nodejs16
+  region: UPDATE_ME
+  application-id: UPDATE_ME
+  entrypoint: [node, index.js]
+debug:
+  name: debug
+  entrypoint: [nodemon, --inspect, index.js]
