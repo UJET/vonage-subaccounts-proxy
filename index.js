@@ -1,4 +1,4 @@
-import express from "express";
+import express, { response } from "express";
 import dotenv from "dotenv";
 import { vcr } from "@vonage/vcr-sdk";
 import axios from "axios";
@@ -13,6 +13,7 @@ import {
   deleteTable,
 } from "./helpers.js";
 import {
+  apiRetrieveSubaccount,
   apiSignatureSecret,
   apiModifySubaccount,
   apiModifySubaccountTrue,
@@ -35,7 +36,7 @@ const authenticate = (req, res, next) => {
 
   if (!authHeader) {
     console.log("No auth headers!");
-    return res.status(401).end();
+    return res.status(401).json("No auth headers!");
   }
 
   const [auth_api_key, auth_api_secret] = Buffer.from(
@@ -47,7 +48,7 @@ const authenticate = (req, res, next) => {
 
   if (!auth_api_key || !auth_api_secret) {
     console.log("Invalid Authorization Header!");
-    return res.status(401).end();
+    return res.status(401).json("Invalid Authorization Header!");
   }
 
   req.auth_api_key = auth_api_key;
@@ -63,7 +64,7 @@ app.post("/set-mainkeys", authenticate, async (req, res) => {
 
     if (!mainKeys || !Array.isArray(mainKeys) || mainKeys.length === 0) {
       console.log("Invalid or empty mainKeys array!");
-      return res.status(400).end();
+      return res.status(400).json("Invalid or empty mainKeys array!");
     }
 
     const setMainKeys = await state.set("mainKeys", mainKeys);
@@ -73,11 +74,11 @@ app.post("/set-mainkeys", authenticate, async (req, res) => {
       res.status(200).json(mainKeys);
     } else {
       console.log("Failed to set main keys.");
-      res.status(500).end();
+      res.status(500).json("Failed to set main keys");
     }
   } catch (error) {
     console.error("Error setting main keys:", error.message);
-    res.status(500).end();
+    res.status(500).json("Error setting main keys");
   }
 });
 
@@ -91,11 +92,11 @@ app.get("/get-mainkeys", authenticate, async (req, res) => {
       res.status(200).json(getMainKeys);
     } else {
       console.log("Main keys not found.");
-      res.status(404).end();
+      res.status(404).json("Main keys not found");
     }
   } catch (error) {
     console.error("Error retrieving main keys:", error.message);
-    res.status(500).end();
+    res.status(500).json("Error retrieving main keys");
   }
 });
 
@@ -111,11 +112,11 @@ app.get("/get-index/:apikey", authenticate, async (req, res) => {
       res.status(200).json(getIndex);
     } else {
       console.log(`Index not found for apikey: ${apikey}`);
-      res.status(404).end();
+      res.status(404).json("Index not found for apikey");
     }
   } catch (error) {
     console.error(`Error retrieving index: ${error.message}`);
-    res.status(500).end();
+    res.status(500).json("Error retrieving index");
   }
 });
 
@@ -125,17 +126,84 @@ app.get("/get-subkey/:subkey", authenticate, async (req, res) => {
     const { subkey } = req.params;
     const recordKey = `${auth_api_key}:${subkey}`;
     const getSubkey = await state.get(recordKey);
-
+    let response;
     if (getSubkey !== null) {
       console.log(`Retrieved subkey for recordKey: ${recordKey}`);
       res.status(200).json(getSubkey);
     } else {
-      console.log(`Subkey not found for recordKey: ${recordKey}`);
-      res.status(404).end();
+      response = `Subkey not found for recordKey: ${recordKey}`;
+      console.log(response);
+      res.status(404).json(response);
+    }
+  } catch (error) {
+    response = `Error retrieving subkey: ${error.message}`;
+    console.error(response);
+    res.status(500).json(response);
+  }
+});
+
+app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
+  try {
+    const { auth_api_key, auth_api_secret } = req;
+    const { subkey } = req.params;
+    const recordKey = `${auth_api_key}:${subkey}`;
+    const getSubkey = await state.get(recordKey);
+
+    let response;
+    if (getSubkey !== null) {
+      response = `recordKey ${recordKey} already exists!`;
+      console.log(response);
+      res.status(200).json(response);
+    } else {
+      response = await apiRetrieveSubaccount(
+        auth_api_key,
+        auth_api_secret,
+        subkey
+      );
+      let record = await createRecord(response, response.suspended);
+      res.status(200).json(record);
     }
   } catch (error) {
     console.error(`Error retrieving subkey: ${error.message}`);
-    res.status(500).end();
+    res.status(500).json("Error retrieving subkey");
+  }
+});
+
+app.post("/set-subkey-signature/:subkey", authenticate, async (req, res) => {
+  try {
+    const { auth_api_key, auth_api_secret } = req;
+    const { subkey } = req.params;
+    const { signature_secret } = req.body;
+    const recordKey = `${auth_api_key}:${subkey}`;
+    let getSubkey = await state.get(recordKey);
+    let response;
+
+    if (!req.params) {
+      return res.status(404).json("no params passed");
+    } else if (!subkey) {
+      return res.status(404).json("no subkey passed");
+    } else if (subkey === "") {
+      res.status(404).json("subkey empty.");
+    } else if (subkey === ":subkey") {
+      res.status(404).json("subkey empty");
+    } else if (!signature_secret) {
+      response = `signature_secret ${signature_secret} is required!`;
+      res.status(404).json(response);
+    } else if (getSubkey === null) {
+      response = `recordKey ${recordKey} does not exist!`;
+      res.status(404).json(response);
+    } else {
+      getSubkey.signature_secret = signature_secret;
+      let setSubkey = await state.set(recordKey, getSubkey);
+      let newSubkey = await state.get(recordKey);
+      response = `Set recordKey ${recordKey} signature_secret ${setSubkey}!`;
+      console.log(response);
+      res.status(200).json(newSubkey);
+    }
+  } catch (error) {
+    let response = `Error setting signature_secret for subkey: ${error.message}`;
+    console.error(response);
+    res.status(500).json(response);
   }
 });
 
@@ -148,12 +216,12 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
 
     if (auth_api_key !== api_key || !api_secret || !name) {
       console.error("Key/Header Mismatch or Missing Parameters!");
-      return res.status(401).end();
+      return res.status(401).json("Key/Header Mismatch or Missing Parameters!");
     }
 
     if (name.length > 80) {
       console.error("Name length exceeds 80");
-      return res.status(400).send("Name length exceeds 80");
+      return res.status(400).json("Name length exceeds 80");
     }
 
     const getMainKeys = await state.get("mainKeys");
@@ -163,7 +231,7 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
 
     if (!mainKeyInfo) {
       console.error("Invalid API Key, not found: ", api_key);
-      return res.status(404).end();
+      return res.status(404).json("Invalid API Key, not found");
     }
 
     let newAccount = null;
@@ -191,7 +259,7 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
     return res.status(code).json(newAccount);
   } catch (error) {
     console.error(`Error creating subaccount: ${error.message}`);
-    res.status(500).end();
+    res.status(500).json("Error creating subaccount");
   }
 });
 
@@ -203,10 +271,13 @@ app.delete(
       const { auth_api_key, auth_api_secret } = req;
       const api_key = req.params.apikey;
       const sub_key = req.params.subkey;
+      console.log(`DELETE apikey:subkey > ${api_key}:${sub_key}`);
 
       if (auth_api_key !== api_key || !sub_key || !api_key) {
         console.error("Key/Header Mismatch or Missing Parameters!");
-        return res.status(401).end();
+        return res
+          .status(401)
+          .json("Key/Header Mismatch or Missing Parameters!");
       }
 
       const getMainKeys = await state.get("mainKeys");
@@ -214,15 +285,19 @@ app.delete(
 
       if (!key || !key.pool) {
         console.error("Invalid API Key or not Pooled: ", api_key);
-        return res.status(404).end();
+        return res.status(404).json("Invalid API Key or not Pooled");
       }
 
       const rkey = `${api_key}:${sub_key}`;
       const sub = await getRecord(rkey);
 
       if (sub === null) {
-        console.error("Invalid API sub_key: ", rkey);
-        return res.status(404).end();
+        console.error(
+          "Invalid API api_key:sub_key: ",
+          rkey,
+          " - sub_key does not exist"
+        );
+        return res.status(404).json("Invalid API api_key:sub_key");
       }
 
       const suspensionResult = await apiModifySubaccountTrue(
@@ -235,13 +310,13 @@ app.delete(
 
       if (!suspensionResult) {
         console.error("Failed to suspend subaccount: ", sub_key);
-        return res.status(500).end();
+        return res.status(500).json("Failed to suspend subaccount");
       }
 
       return res.status(200).json(suspensionResult);
     } catch (error) {
       console.error(`Error deleting subaccount: ${error.message}`);
-      res.status(500).end();
+      res.status(500).json("Error deleting subaccount");
     }
   }
 );
@@ -256,8 +331,8 @@ app.get("/_/metrics", (req, res) => {
 
 app.get("/", (req, res) => {
   try {
-    console.log(req.query);
-    res.status(200).send("Hello World!");
+    let hello = "Hello";
+    res.status(200).send(`${hello} World`);
   } catch (error) {
     console.error(`Error handling request: ${error.message}`);
     res.status(500).send("Internal Server Error");

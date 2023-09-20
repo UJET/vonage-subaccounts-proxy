@@ -1,7 +1,8 @@
 {
 	"info": {
 		"_postman_id": "3783a518-545b-401e-ac60-0080bae7b407",
-		"name": "vcr-account-proxy for UJET Demo",
+		"name": "vonage-subaccounts-proxy",
+		"description": "This project provides a Node.js-based server for managing subaccounts in the Vonage Subaccounts API. It offers a set of API endpoints to create, modify, and delete subaccounts (suspend: true), as well as manage their attributes. You can find the GitHub Repository [here](https://github.com/nexmo-se/vonage-subaccounts-proxy).\n\n  \n**Proxy Logic**  \nIf apikey is not one of the mainkeys, then proxy request to Create Sub Account API and return newly created subaccount data (as returned in Create Sub Account response).\n\n  \nIf apikey is one of the mainkeys:\n\n- If there is any free subaccount (suspended: true and used: false) in Pool (mainkey pool Index)\n    \n    - return that subaccount info (same as response from as Create Sub Account API returns).\n        \n    - Update the subaccount via Subaccount Modify API to suspended: false and also set that main apikey's subaccount apikey to used: true (see Postman Request GET get-index)\n        \n- If there are no free subaccounts in the Pool (mainkey pool Index):\n    \n    - Create new subaccount with Create Subaccount Signature Secret API\n        \n    - Add it to the Pool (mainkey pool Index) and set that main apikey's subaccount apikey to used: true (see Postman Request GET get-index)\n        \n    - Return that subaccount info which also includes signature_secret.\n        \n\n  \n**Routes**  \nPOST /set-mainkeys  \nSets the main keys required for authentication. Expects JSON payload with main keys.  \n\nGET /get-mainkeys  \nRetrieves the main keys used for authentication.  \n\nGET /get-index/:apikey  \nRetrieves information for a specific subaccount based on the provided API key.  \n\nGET /get-subkey/:subkey  \nRetrieves information for a specific subaccount based on the provided subkey.  \n\nPOST /set-subkey/:subkey  \nRetrieves information for a specific subaccount based on the provided subkey and then\n\ncreates a VCR subaccount record for it.  \n\nPOST /set-subkey-signature/:subkey  \nRetrieves information for a specific subaccount based on the provided subkey and then adds the signature_secret to the VCR subaccount record.  \n\nPOST /account/:apikey/subaccounts  \nCreates a new subaccount under the provided API key. Expects JSON payload with name and secret.  \n\nDELETE /account/:apikey/subaccounts/:subkey  \nDeletes a subaccount (suspend: true) under the provided API key and subkey while also freeing up the VCR subaccount record (used: false).  \n\n\\> Upon Request to DELETE route \\`/account/:apikey/subaccounts/:subkey\\`, if the subaccount does not exist in the VCR State: Then you need to manually add it via route \\`set-subkey\\`.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "9277659"
 	},
@@ -18,6 +19,63 @@
 					],
 					"path": [
 						"get-subkey",
+						":subkey"
+					],
+					"variable": [
+						{
+							"key": "subkey",
+							"value": "{{SUBKEY}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "set-subkey",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{VCR_URL}}/set-subkey/:subkey",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"set-subkey",
+						":subkey"
+					],
+					"variable": [
+						{
+							"key": "subkey",
+							"value": "{{SUBKEY}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "set-subkey-signature/:subkey",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"signature_secret\": \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{VCR_URL}}/set-subkey-signature/:subkey",
+					"host": [
+						"{{VCR_URL}}"
+					],
+					"path": [
+						"set-subkey-signature",
 						":subkey"
 					],
 					"variable": [

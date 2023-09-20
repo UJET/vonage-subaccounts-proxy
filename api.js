@@ -2,6 +2,44 @@ import axios from "axios";
 import { findFree, createRecord, modifyTable } from "./helpers.js";
 
 /**
+ * Retrieve a subaccount's information specified with its API key.
+ * @param {string} api_key - The API key.
+ * @param {string} api_secret - The API secret.
+ * @param {string} subaccount_key - The subaccount key.
+ * @returns {Promise<boolean>} - A Promise that resolves to true if successful, false otherwise.
+ */
+export async function apiRetrieveSubaccount(
+  api_key,
+  api_secret,
+  subaccount_key
+) {
+  try {
+    const urlRetrieveSubaccount = `https://api.nexmo.com/accounts/${api_key}/subaccounts/${subaccount_key}`;
+
+    // Make a GET request to retrieve the subaccount information.
+    const response = await axios.get(urlRetrieveSubaccount, {
+      auth: {
+        username: api_key,
+        password: api_secret,
+      },
+    });
+
+    console.log("apiRetrieveSubaccount data:", response.data);
+
+    // Modify the record in the table.
+    // modifyTable(response.data);
+
+    // Return response to indicate a successful retrieval.
+    return response.data;
+  } catch (error) {
+    console.error(`apiRetrieveSubaccount error: ${error.message}`);
+
+    // Return false to indicate that the retrieval was not successful.
+    return error.message;
+  }
+}
+
+/**
  * Generates a signature secret for a subaccount.
  * @param {string} api_key - The API key.
  * @param {string} api_secret - The API secret.
