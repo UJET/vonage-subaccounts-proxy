@@ -10,7 +10,7 @@ If apikey is one of the mainkeys:
 
 - If there is any free subaccount (suspended: true and used: false) in Pool (mainkey pool Index)
 
-  - return that subaccount info (same as response from as Create Sub Account API returns). 
+  - return that subaccount info (same as response from as Create Sub Account API returns).
   - Update the subaccount via Subaccount Modify API to suspended: false and also set that main apikey's subaccount apikey to used: true (see Postman Request GET get-index)
 
 - If there are no free subaccounts in the Pool (mainkey pool Index):
@@ -27,6 +27,8 @@ If apikey is one of the mainkeys:
 - **Generate Signature Secrets**: The server can generate signature secrets for subaccounts, providing enhanced security.
 
 - **Pool Management**: Subaccounts can be managed in a pool, allowing for efficient utilization and modification of existing subaccounts.
+
+- **Add Subaccount Signature Secret to the VCR Subaccount Record**: It provides functionality to add subaccount signature_secret attribute.
 
 ## Files
 
@@ -60,13 +62,23 @@ Retrieves information for a specific subaccount based on the provided API key.
 
 Retrieves information for a specific subaccount based on the provided subkey.
 
+### `POST /set-subkey/:subkey`
+
+Retrieves information for a specific subaccount based on the provided subkey and then creates a VCR subaccount record for it.
+
+### `POST /set-subkey-signature/:subkey`
+
+Retrieves information for a specific subaccount based on the provided subkey and then adds the signature_secret to the VCR subaccount record.
+
 ### `POST /account/:apikey/subaccounts`
 
 Creates a new subaccount under the provided API key. Expects JSON payload with name and secret.
 
 ### `DELETE /account/:apikey/subaccounts/:subkey`
 
-Deletes a subaccount (suspend: true) under the provided API key and subkey.
+Deletes a subaccount (suspend: true) under the provided API key and subkey while also freeing up the VCR subaccount record (used: false).
+
+> Upon Request to DELETE route `/account/:apikey/subaccounts/:subkey`, if the subaccount does not exist in the VCR State: Then you need to manually add it via route `set-subkey`.
 
 ## API Calls
 
@@ -96,11 +108,43 @@ Enable Vonage Cloud Runtime (VCR) for your Vonage Dashboard
 
 Go to the [VCR online IDE](https://developer.vonage.com/en/cloud-runtime/workspaces). Make sure you are Signed in.
 
-Click on Create Workspace. Import the public GitHub repository `https://github.com/nexmo-se/vonage-subaccounts-proxy.git`. Enter a workspace name.
+Click on Create Workspace. Import the public GitHub repository `https://github.com/nexmo-se/vonage-subaccounts-proxy.git`. Enter a workspace name e.g. vonage-subaccounts-proxy.
 
-If you look at the `neru.yml` file you'll noticed that it applied an `applicatio-id`. If you go onto your Vonage Dashboard Applications, you'll see that the Vonage VCR Application exists.
+The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name. To connect the Vonage Application we will run the following commands. Just like VS Code, you can drag the hidden terminal below to view it. Run the following commands:
 
-Just like VS Code, you can drag the hidden terminal below to view it. Run the following commands:
+```js
+// At the IDE Terminal, we will update the VCR version. If an update exists, opt for yes
+neru version
+// Initialize the project via
+neru init
+// enter a project name, usally the same name as previously. eg. vonage-subaccounts-proxy
+// Select the Vonage App with the same name. Node16 and select the closest region to you.
+// e.g. AWS - US Virginia - (aws.use1) and then any Instance Name e.g. ide and Skip the Template generation since we have have our own source code already.
+```
+
+Now at the root directory you will notice that a `neru.yml` file was generated. Currently, there is a bug and we will need to add the lines below. Please see the sample file `neru-sample.yml` as a reference.
+
+```js
+entrypoint: [node, index.js];
+debug: name: debug;
+entrypoint: [nodemon, --inspect, index.js];
+```
+
+Your `neru.yml` should look similiar to.
+
+```js
+project:
+    name: vonage-subaccounts-proxy
+instance:
+    name: ide
+    runtime: nodejs16
+    region: aws.use1
+    application-id: abcd-abcd-abcd-abcd
+    entrypoint: [node, index.js]
+debug:
+  name: debug
+  entrypoint: [nodemon, --inspect, index.js]
+```
 
 ```js
 npm install
@@ -118,7 +162,7 @@ Application Host: https://neru-APIKEY-debug-INSTANCE_NAME.REGION.runtime.vonage.
 
 ## Running the Proxy Demo
 
-To test the VCR routes, I've included a Postman Collection for you to import into Postman. The file is `subaccount-proxy.postman_collection.json`.
+To test the VCR routes, I've included a Postman Collection for you to import into Postman. The file is `vonage-subaccounts-proxy.postman_collection.json`.
 
 Update the Postman Collection Variables {VCR_URL, SUBKEY, NAME, SECRET, APIKEY}. The VCR_URL is the URL of your VCR Instance you got when you ran `vcr debug`.
 
@@ -129,31 +173,31 @@ Use the Postman requests to set your mainkeys via POST set-mainkey and GET get-m
 ```js
 // At Postman Request POST set-mainkey, set your Main API Keys for the accounts you want to use to "pool": true
 [
-    {
-        "name": "Google OEM Demo (current)",
-        "apikey": "AAAAA",
-        "pool": true,
-        "max": 10000
-    },
-    {
-        "name": "Google OEM Demo (next)",
-        "apikey": "BBBBB",
-        "pool": true,
-        "max": 10000
-    },
-    {
-        "name": "Other",
-        "apikey": "CCCCC",
-        "pool": false,
-        "max": 10000
-    },
-]
+  {
+    name: "Google OEM Demo (current)",
+    apikey: "AAAAA",
+    pool: true,
+    max: 10000,
+  },
+  {
+    name: "Google OEM Demo (next)",
+    apikey: "BBBBB",
+    pool: true,
+    max: 10000,
+  },
+  {
+    name: "Other",
+    apikey: "CCCCC",
+    pool: false,
+    max: 10000,
+  },
+];
 ```
 
 To get a free subaccount, you make a request via GET FREE.
 
 ```js
-// Response if there isn't a free subaccount, then it will create one and return it's info with a signature_secret. 
+// Response if there isn't a free subaccount, then it will create one and return it's info with a signature_secret.
 {
   "secret": "secret",
   "api_key": "aaaaa",
@@ -172,7 +216,7 @@ To get a free subaccount, you make a request via GET FREE.
 
 To suspend a subaccount use the DEL DELETE. This will then make it available when the GET FREE request is called.
 
-There are some additional Postman Requests I've created for you to Retrieve the subaccount's info which is via GET get-subkey. 
+There are some additional Postman Requests I've created for you to Retrieve the subaccount's info which is via GET get-subkey.
 
 You can view all the subaccount keys via GET get-index by passing the master apikey.
 
@@ -181,25 +225,25 @@ You can view all the subaccount keys via GET get-index by passing the master api
 // Ex. This would be the Index list of all subaccounts for primary_account_api_key: "AAAAA".
 // When making a Postman Request DEL DELETE route {{VCR_URL}}/account/:apikey/subaccounts/:subkey, it will set suspended: true and used: false, which makes it Free.
 [
-    {
-        "api_key": "aaaaa",
-        "used": true
-    },
-    {
-        "api_key": "bbbbb",
-        "used": true
-    },
-    {
-        "api_key": "ccccc",
-        "used": false
-    }
-]
+  {
+    api_key: "aaaaa",
+    used: true,
+  },
+  {
+    api_key: "bbbbb",
+    used: true,
+  },
+  {
+    api_key: "ccccc",
+    used: false,
+  },
+];
 ```
 
 You can also view a subaccounts info via Postman Request GET get-subkey
 
 ```js
-// Response for Postman Request GET get-subkey 
+// Response for Postman Request GET get-subkey
 {
   "secret": "secret",
   "api_key": "aaaaa",

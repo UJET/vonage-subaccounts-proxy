@@ -1,6 +1,7 @@
 # Neru dev
 neru.yml
 *.env
+/dev
 
 # Logs
 logs

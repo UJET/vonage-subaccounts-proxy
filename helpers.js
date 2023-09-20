@@ -86,9 +86,11 @@ export async function deleteTable(record) {
 
 export async function createRecord(record, used) {
   try {
-    console.log("createRecord record used:", used);
-    await setTable(record);
-    await setIndex(record, used);
+    let table = await setTable(record);
+    let index = await setIndex(record, used);
+    let response = `createRecord > setTable:${table}, setIndex:${index}`;
+    console.log(response);
+    return response;
   } catch (error) {
     console.error(`createRecord ERROR: ${error.message}`);
   }
@@ -97,7 +99,9 @@ export async function createRecord(record, used) {
 export async function getRecord(recordKey) {
   try {
     let getRecordState = await state.get(recordKey); // null if not exist
-    console.log(`getRecord recordKey ${recordKey}: ${getRecordState}`); // recordKey acc6111f:bbbbb
+    console.log(
+      `getRecord recordKey ${recordKey}, ${getRecordState} - recordKey does not exist`
+    ); // recordKey acc6111f:bbbbb
     return getRecordState;
   } catch (error) {
     console.error(`getRecord ERROR: ${error.message}`);
@@ -175,6 +179,7 @@ async function setIndex(record, used) {
     console.log(
       `setIndex > sub_key: ${record.api_key} added to index: ${record.primary_account_api_key}, setMainState: ${setMainState}`
     );
+    return setMainState;
   } catch (error) {
     console.error(`setIndex ERROR: ${error.message}`);
   }
