@@ -57,6 +57,26 @@ const authenticate = (req, res, next) => {
   next();
 };
 
+// console.log(`Application Name: ${process.env.INSTANCE_SERVICE_NAME}`);
+// console.log(process.env);
+let region = process.env.REGION;
+let modifiedRegion = region.replace(/^aws\./, "");
+// Every 30 seconds a request is made to prevent inactivity hibernation of 1 minute, which causes cold start.
+let interval = setInterval(() => {
+  axios
+    .get(
+      `http://${process.env.INSTANCE_SERVICE_NAME}.${modifiedRegion}.runtime.vonage.cloud/keep-alive`
+    )
+    .then((resp) => {
+      console.log(resp.data);
+    })
+    .catch((err) => console.log("interval error: ", err));
+}, 30000);
+
+app.get("/keep-alive", (req, res) => {
+  res.send(`/keep-alive`);
+});
+
 app.post("/set-mainkeys", authenticate, async (req, res) => {
   try {
     const { auth_api_key, auth_api_secret } = req;
