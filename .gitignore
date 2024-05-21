@@ -1,4 +1,6 @@
 # Neru dev
+README-small.md
+README copy.md
 neru.yml
 *.env
 /dev
@@ -135,3 +137,5 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+README-small.md
+FLOW.TXT

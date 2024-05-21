@@ -24,7 +24,8 @@ import {
 
 dotenv.config();
 
-const state = vcr.getAccountState();
+// const state = vcr.getAccountState();
+const state = vcr.getInstanceState();
 const app = express();
 const port = process.env.VCR_PORT;
 
