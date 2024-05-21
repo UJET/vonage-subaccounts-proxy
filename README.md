@@ -106,11 +106,21 @@ Creates a new subaccount.
 
 Enable Vonage Cloud Runtime (VCR) for your Vonage Dashboard
 
+You can either run this project locally or use the VCR Online IDE.
+
+OPTION 1:
+
 Go to the [VCR online IDE](https://developer.vonage.com/en/cloud-runtime/workspaces). Make sure you are Signed in.
 
 Click on Create Workspace. Import the public GitHub repository `https://github.com/nexmo-se/vonage-subaccounts-proxy.git`. Enter a workspace name e.g. vonage-subaccounts-proxy.
 
-The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name. To connect the Vonage Application we will run the following commands. Just like VS Code, you can drag the hidden terminal below to view it. Run the following commands:
+The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name. 
+
+OPTION 2: 
+
+Setup your local environment by [installing the VCR CLI](https://developer.vonage.com/en/vcr/getting-started/working-locally?source=vcr). Choose OS specific.
+
+To connect the Vonage Application we will run the following commands. Just like VS Code, you can drag the hidden terminal below to view it. Run the following commands:
 
 ```js
 // At the IDE Terminal, we will update the VCR version. If an update exists, opt for yes
