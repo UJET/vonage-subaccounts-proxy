@@ -56,7 +56,7 @@ Retrieves the main keys used for authentication.
 
 ### `GET /get-index/:apikey`
 
-Retrieves information for a specific subaccount based on the provided API key.
+Retrieves subaccounts based on the provided main key.
 
 ### `GET /get-subkey/:subkey`
 

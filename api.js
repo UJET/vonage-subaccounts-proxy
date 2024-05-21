@@ -287,7 +287,7 @@ export async function createPool(
   api_secret
 ) {
   try {
-    // Find out if the API key is in the pool and if it's free
+    // Find out if the API key is in the pool and if there is a unused subaccount
     const free = await findFree(auth_api_key);
     console.log("createPool > auth_api_key:", auth_api_key);
     console.log("createPool > findFree:", free);

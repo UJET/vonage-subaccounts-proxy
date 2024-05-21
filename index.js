@@ -232,6 +232,7 @@ app.post("/set-subkey-signature/:subkey", authenticate, async (req, res) => {
   }
 });
 
+// Find Free
 app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
   try {
     const { auth_api_key, auth_api_secret } = req;
@@ -239,9 +240,13 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
     const api_secret = req.body.secret;
     const name = req.body.name;
 
-    if (auth_api_key !== api_key || !api_secret || !name) {
-      console.error("Key/Header Mismatch or Missing Parameters!");
-      return res.status(401).json("Key/Header Mismatch or Missing Parameters!");
+    let response;
+    if (!api_secret || !name) {
+      response = `Missing request body api_key: ${api_key} or api_secret: ${api_secret}`;
+      return res.status(401).json(response);
+    } else if (!api_key) {
+      response = `Missing param api_key: ${api_key}`;
+      return res.status(401).json(response);
     }
 
     if (name.length > 80) {
