@@ -122,12 +122,18 @@ app.get("/get-mainkeys", authenticate, async (req, res) => {
 });
 
 app.get("/get-index/:apikey", authenticate, async (req, res) => {
+  let response;
   try {
     const { auth_api_key, auth_api_secret } = req;
     const { apikey } = req.params;
 
+    if (!apikey) {
+      response = `Missing request body apikey: ${apikey}`;
+      return res.status(401).json(response);
+    }
+
     const getIndex = await state.get(apikey);
-    let response;
+
     if (getIndex) {
       console.log(`Retrieved index for apikey: ${apikey}`);
       response = getIndex;
@@ -141,8 +147,8 @@ app.get("/get-index/:apikey", authenticate, async (req, res) => {
       res.status(404).json(response);
     }
   } catch (error) {
-    console.error(`Error retrieving index: ${error}`);
-    res.status(500).json("Error retrieving index");
+    response = `Error retrieving index: ${error}`;
+    res.status(500).json(response);
   }
 });
 
