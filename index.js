@@ -138,13 +138,15 @@ app.get("/get-index/:apikey", authenticate, async (req, res) => {
       console.log(`Retrieved index for apikey: ${apikey}`);
       response = getIndex;
       res.status(200).json(response);
-    } else {
+    } else if (getIndex === null) {
       // if subaccounts don't exist for apikey, state object returns null, so we respond with []
       console.log(`Subaccounts don't exist for apikey: ${apikey}`);
-      if (getIndex === null) {
-        response = [];
-      }
-      res.status(404).json(response);
+      response = [];
+      res.status(200).json(response);
+    } else {
+      console.log(`Something went wrong`);
+      response = [];
+      res.status(200).json(response);
     }
   } catch (error) {
     response = `Error retrieving index: ${error}`;
