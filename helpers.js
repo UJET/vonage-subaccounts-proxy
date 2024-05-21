@@ -1,6 +1,7 @@
 import axios from "axios";
 import { vcr } from "@vonage/vcr-sdk";
-const state = vcr.getAccountState();
+// const state = vcr.getAccountState();
+const state = vcr.getInstanceState();
 
 export async function findFree(primary_account_api_key) {
   try {

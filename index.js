@@ -127,16 +127,21 @@ app.get("/get-index/:apikey", authenticate, async (req, res) => {
     const { apikey } = req.params;
 
     const getIndex = await state.get(apikey);
-
+    let response;
     if (getIndex) {
       console.log(`Retrieved index for apikey: ${apikey}`);
-      res.status(200).json(getIndex);
+      response = getIndex;
+      res.status(200).json(response);
     } else {
-      console.log(`Index not found for apikey: ${apikey}`);
-      res.status(404).json("Index not found for apikey");
+      // if subaccounts don't exist for apikey, state object returns null, so we respond with []
+      console.log(`Subaccounts don't exist for apikey: ${apikey}`);
+      if (getIndex === null) {
+        response = [];
+      }
+      res.status(404).json(response);
     }
   } catch (error) {
-    console.error(`Error retrieving index: ${error.message}`);
+    console.error(`Error retrieving index: ${error}`);
     res.status(500).json("Error retrieving index");
   }
 });
@@ -162,7 +167,6 @@ app.get("/get-subkey/:subkey", authenticate, async (req, res) => {
     res.status(500).json(response);
   }
 });
-
 app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
   try {
     const { auth_api_key, auth_api_secret } = req;
