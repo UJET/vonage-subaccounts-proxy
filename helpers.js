@@ -154,6 +154,17 @@ async function setIndex(record, used) {
     let getMainState = await state.get(record.primary_account_api_key);
     console.log("setIndex > getMainState:", getMainState);
 
+    // Flippin Boolean
+    // IF suspended: true SET used: false
+    // IF suspended: false SET used: true
+    if (used === false) {
+      console.log(`suspended: ${used} === used: true`);
+      used = true;
+    } else if (used === true) {
+      console.log(`suspended: ${used} === used: false`);
+      used = false;
+    }
+
     let newSubkey = {
       api_key: record.api_key,
       used: used,
