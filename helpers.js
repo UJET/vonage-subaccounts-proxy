@@ -1,6 +1,4 @@
-import axios from "axios";
 import { vcr } from "@vonage/vcr-sdk";
-// const state = vcr.getAccountState();
 const state = vcr.getInstanceState();
 
 export async function findFree(primary_account_api_key) {
@@ -102,7 +100,7 @@ export async function getRecord(recordKey) {
     let getRecordState = await state.get(recordKey); // null if not exist
     console.log(
       `getRecord recordKey ${recordKey}, ${getRecordState} - recordKey does not exist`
-    ); // recordKey acc6111f:bbbbb
+    ); // recordKey (apikey:subkey)
     return getRecordState;
   } catch (error) {
     console.error(`getRecord ERROR: ${error.message}`);
@@ -114,7 +112,7 @@ export async function getTable(record) {
   try {
     const recordKey = `${record.primary_account_api_key}:${record.api_key}`;
     let getRecordState = await state.get(recordKey); // null if not exist
-    console.log(`getTable > recordKey ${recordKey}`); // recordKey acc6111f:bbbbb
+    console.log(`getTable > recordKey ${recordKey}`); // recordKey (apikey:subkey)
 
     if (getRecordState === null) {
       console.log(
@@ -130,6 +128,7 @@ export async function getTable(record) {
   }
 }
 
+// IF record (apikey:subkey) exists return nothing, ELSE save the record.
 async function setTable(record) {
   try {
     const recordKey = `${record.primary_account_api_key}:${record.api_key}`;

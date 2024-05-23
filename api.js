@@ -40,18 +40,18 @@ export async function apiRetrieveSubaccount(
 }
 
 /**
- * Generates a signature secret for a subaccount.
+ * Creats a NEW Subaccount with a generated signature_secret using the api_key.
  * @param {string} api_key - The API key.
  * @param {string} api_secret - The API secret.
  * @param {string} name - The name of the subaccount.
  * @param {string} secret - The secret for the subaccount.
- * @returns {Promise<Object>} - A Promise that resolves to the response data containing the signature secret.
+ * @returns {Promise<Object>} - A Promise that resolves to the response data containing the signature_secret.
  */
 export async function apiSignatureSecret(api_key, api_secret, name, secret) {
   try {
     const urlSignatureSecret = `https://api.nexmo.com/accounts/${api_key}/subaccounts?sensitive-data=true`;
 
-    // Make a POST request to generate the signature secret.
+    // Make a POST request to creats a NEW Subaccount with a generated signature_secret using the api_key.
     const response = await axios.post(
       urlSignatureSecret,
       {
@@ -67,13 +67,12 @@ export async function apiSignatureSecret(api_key, api_secret, name, secret) {
       }
     );
 
-    // Log the data received from the API response.
     console.log("apiSignatureSecret:", response.data);
 
-    // Create a record for the response data.
+    // Create a record for the response data. Set used: true. Will be added to /get-index VCR data
     createRecord(response.data, true);
 
-    // Return the response data containing the signature secret.
+    // Return the subaccount object with the signature_secret.
     return response.data;
   } catch (error) {
     console.error(`apiSignatureSecret ERROR: ${error.message}`);
@@ -118,7 +117,7 @@ export async function apiModifySubaccount(
 
     console.log("apiModifySubaccount data:", response.data);
 
-    // Modify the record in the table.
+    // Modify the VCR record table.
     modifyTable(response.data);
 
     // Return true to indicate a successful modification.
@@ -137,7 +136,7 @@ export async function apiModifySubaccount(
  * @param {string} api_secret - The API secret.
  * @param {string} subaccount_key - The subaccount key.
  * @param {string} name - The new name for the subaccount.
- * @param {boolean} suspended - The new suspended status.
+ * @param {boolean} suspended - The new suspended status true
  * @returns {Promise<boolean>} - A Promise that resolves to true if successful, false otherwise.
  */
 export async function apiModifySubaccountTrue(
@@ -221,7 +220,7 @@ export async function apiCreateApiSecret(api_key, api_secret, new_secret) {
 }
 
 /**
- * Creates a subaccount.
+ * Creates a subaccount without signature_secret
  * @param {string} auth_api_key - The main account's API key.
  * @param {string} auth_api_secret - The main account's API secret.
  * @param {string} name - The name of the subaccount.
@@ -289,14 +288,13 @@ export async function createPool(
   try {
     // Find out if the API key is in the pool and if there is a unused subaccount
     const free = await findFree(auth_api_key);
-    console.log("createPool > auth_api_key:", auth_api_key);
     console.log("createPool > findFree:", free);
 
     if (free === false || free === undefined) {
       console.log(
-        "createPool > apiCreateSubaccount called because mainkey in pool && NOT free or free is undefined"
+        "createPool > apiSignatureSecret called because none free or free is undefined"
       );
-      // Create a new subaccount and return the signature secret
+      // IF free: false, Create a new subaccount with signature secret and return subaccount object
       return await apiSignatureSecret(
         auth_api_key,
         auth_api_secret,
@@ -304,13 +302,14 @@ export async function createPool(
         api_secret
       );
     } else {
-      // Change the password, then mark it used, and return it.
+      // IF free: true, TRY TO Update the password.
       const pass = apiCreateApiSecret(free.api_key, free.secret, api_secret);
 
+      // IF Update secret was successfull, then
+      // Modify the subaccount by updating the "suspended" and "name" properties.
       if (pass) {
         console.log("createPool Password successfully adjusted: ", pass);
 
-        // Modify the subaccount by updating the "suspended" and "name" values
         const suspended = false;
         const updated = await apiModifySubaccount(
           auth_api_key,
@@ -322,8 +321,8 @@ export async function createPool(
 
         console.log("createPool apiModifySubaccount response: ", updated);
 
+        // If updated successfully, set the subaccount details and create a VCR subaccount record
         if (updated) {
-          // If successfully updated, set the subaccount details and create a record
           free.name = name;
           free.suspended = false;
           free.used = true;

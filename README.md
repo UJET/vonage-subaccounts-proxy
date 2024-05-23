@@ -2,9 +2,11 @@
 
 This project provides a Node.js-based server for managing subaccounts in the Vonage Subaccounts API. It offers a set of API endpoints to create, modify, and delete subaccounts (suspend: true), as well as manage their attributes.
 
+> DISCLAIMER: The Proxy needs to be deployed (vcr deploy) for the new Subaccounts with signature_secret to be stored in VCR Instance State.
+
 ## Proxy Logic
 
-If apikey is not one of the mainkeys, then proxy request to Create Sub Account API and return newly created subaccount data (as returned in Create Sub Account response).
+If apikey is not one of the mainkeys, then proxy request to Create Sub Account API and return newly created subaccount data including signature_secret (as returned in Create Sub Account response).
 
 If apikey is one of the mainkeys:
 
@@ -20,15 +22,15 @@ If apikey is one of the mainkeys:
 
 ## Features
 
-- **Create Subaccounts**: The server allows for the creation of subaccounts with specified names and secrets.
+- **Create Subaccounts**: The Proxy server creats new subaccounts when all are being used. 
 
 - **Modify Subaccount Attributes**: It provides functionality to update subaccount attributes such as name and suspended status.
 
-- **Generate Signature Secrets**: The server can generate signature secrets for subaccounts, providing enhanced security.
+- **Generate Signature Secrets**: The Proxy server can generate signature secrets for subaccounts when it is created to provide enhanced security. This occurs when no subaccounts are available.
 
 - **Pool Management**: Subaccounts can be managed in a pool, allowing for efficient utilization and modification of existing subaccounts.
 
-- **Add Subaccount Signature Secret to the VCR Subaccount Record**: It provides functionality to add subaccount signature_secret attribute.
+- **Add Subaccount Signature Secret to the VCR Subaccount Record**: It provides functionality to add subaccount signature_secret attribute via /set-subkey-signature/:subkey route.
 
 ## Files
 
@@ -56,19 +58,25 @@ Retrieves the main keys used for authentication.
 
 ### `GET /get-index/:apikey`
 
-Retrieves subaccounts based on the provided main key.
+Retrieves subaccounts based on the provided main key. The list is populated when you use the Proxy to create new subaccounts via `POST /account/:apikey/subaccounts`
 
 ### `GET /get-subkey/:subkey`
 
 Retrieves information for a specific subaccount based on the provided subkey.
 
+> NOTE: At time of this, the Vonage API will NOT return the signature_secret with the subaccount info.
+
 ### `POST /set-subkey/:subkey`
 
 Retrieves information for a specific subaccount based on the provided subkey and then creates a VCR subaccount record for it.
 
+> NOTE: At time of this, the Vonage API will NOT return the signature_secret with the subaccount info.
+
 ### `POST /set-subkey-signature/:subkey`
 
-Retrieves information for a specific subaccount based on the provided subkey and then adds the signature_secret to the VCR subaccount record.
+Retrieves information for a specific subaccount based on the provided subkey and then adds the required param you provide of the signature_secret to store in the VCR subaccount record.
+
+> NOTE: At time of this, the Vonage API will NOT return the signature_secret with the subaccount info. This is the reason for this API route.
 
 ### `POST /account/:apikey/subaccounts`
 
