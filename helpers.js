@@ -86,9 +86,9 @@ export async function deleteTable(record) {
 export async function createRecord(record, used) {
   try {
     let table = await setTable(record);
+
     let index = await setIndex(record, used);
-    let response = `createRecord > setTable:${table}, setIndex:${index}`;
-    console.log(response);
+    let response = `createRecord NEW SUBACOUNT: ${table} and ${index}`;
     return response;
   } catch (error) {
     console.error(`createRecord ERROR: ${error.message}`);
@@ -129,7 +129,7 @@ export async function getTable(record) {
 }
 
 // IF record (apikey:subkey) exists return nothing, ELSE save the record.
-async function setTable(record) {
+export async function setTable(record) {
   try {
     const recordKey = `${record.primary_account_api_key}:${record.api_key}`;
     let getRecordState = await state.get(recordKey);
@@ -139,9 +139,19 @@ async function setTable(record) {
       return;
     } else {
       let setRecordState = await state.set(recordKey, record);
-      console.log(
-        `setTable > recordKey ${recordKey} setRecordState: ${setRecordState}`
-      );
+      console.log("SAVED RECORD:", record);
+      // SAVED RECORD: {
+      //   api_key: '332ccb38',
+      //   secret: 'example-4PI-secret',
+      //   primary_account_api_key: '89b7a9b7',
+      //   use_primary_account_balance: true,
+      //   name: 'Vonage - Mark',
+      //   balance: null,
+      //   credit_limit: null,
+      //   suspended: false,
+      //   created_at: '2024-05-24T01:43:08.419Z',
+      //   signature_secret: 'LdDVG5jn4FGmtia8UwZm6J6Oi6cI1B1lXNEsEdlXS24MgMZXxq'
+      // }
       return setRecordState;
     }
   } catch (error) {
@@ -149,14 +159,14 @@ async function setTable(record) {
   }
 }
 
-async function setIndex(record, used) {
+export async function setIndex(record, used) {
   try {
     let getMainState = await state.get(record.primary_account_api_key);
-    console.log("setIndex > getMainState:", getMainState);
 
     // Flip Boolean
     // IF suspended: true SET used: false
     // IF suspended: false SET used: true
+
     let newSubkey = {
       api_key: record.api_key,
       used: !used,
@@ -182,6 +192,48 @@ async function setIndex(record, used) {
     console.log(
       `setIndex > sub_key: ${record.api_key} added to index: ${record.primary_account_api_key}, setMainState: ${setMainState}`
     );
+
+    getMainState = await state.get(record.primary_account_api_key);
+    console.log("setIndex > getIndex:", getMainState);
+    return setMainState;
+  } catch (error) {
+    console.error(`setIndex ERROR: ${error.message}`);
+  }
+}
+
+export async function setIndexFreeUpdate(record, used) {
+  try {
+    let getMainState = await state.get(record.primary_account_api_key);
+
+    let newSubkey = {
+      api_key: record.api_key,
+      used: used,
+    };
+    let tempState = [];
+
+    if (getMainState === null) {
+      tempState.push(newSubkey);
+    } else {
+      if (getMainState.some((subkey) => subkey.api_key === record.api_key)) {
+        console.log("setIndexFreeUpdate api_key EXISTS IN Index");
+        return;
+      } else {
+        console.log("setIndexFreeUpdate api_key NOT IN Index");
+        tempState = getMainState.slice(); // Make a copy to avoid modifying the original array
+        tempState.push(newSubkey);
+      }
+    }
+
+    let setMainState = await state.set(
+      record.primary_account_api_key,
+      tempState
+    );
+    console.log(
+      `setIndex > sub_key: ${record.api_key} added to index: ${record.primary_account_api_key}, setMainState: ${setMainState}`
+    );
+
+    getMainState = await state.get(record.primary_account_api_key);
+    console.log("setIndex > getIndex:", getMainState);
     return setMainState;
   } catch (error) {
     console.error(`setIndex ERROR: ${error.message}`);

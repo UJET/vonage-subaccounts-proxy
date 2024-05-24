@@ -68,7 +68,7 @@ Retrieves information for a specific subaccount based on the provided subkey.
 
 ### `POST /set-subkey/:subkey`
 
-Retrieves information for a specific subaccount based on the provided subkey and then creates a VCR subaccount record for it.
+Retrieves information for a specific subaccount based on the provided subkey and then creates a VCR subaccount record for it. A secret is required in the body that also sends an API request to update the secret.
 
 > NOTE: At time of this, the Vonage API will NOT return the signature_secret with the subaccount info.
 

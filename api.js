@@ -1,5 +1,11 @@
 import axios from "axios";
-import { findFree, createRecord, modifyTable } from "./helpers.js";
+import {
+  findFree,
+  createRecord,
+  modifyTable,
+  setTable,
+  setIndexFreeUpdate,
+} from "./helpers.js";
 
 /**
  * Retrieve a subaccount's information specified with its API key.
@@ -70,7 +76,9 @@ export async function apiSignatureSecret(api_key, api_secret, name, secret) {
     console.log("apiSignatureSecret:", response.data);
 
     // Create a record for the response data. Set used: true. Will be added to /get-index VCR data
-    createRecord(response.data, true);
+    // createRecord(response.data, true);
+    await setTable(response.data);
+    await setIndexFreeUpdate(response.data, true); // free.used = true
 
     // Return the subaccount object with the signature_secret.
     return response.data;
@@ -95,7 +103,8 @@ export async function apiModifySubaccount(
   api_secret,
   subaccount_key,
   name,
-  suspended
+  suspended,
+  subaccount
 ) {
   try {
     const urlModifySubaccount = `https://api.nexmo.com/accounts/${api_key}/subaccounts/${subaccount_key}`;
@@ -115,10 +124,12 @@ export async function apiModifySubaccount(
       }
     );
 
-    console.log("apiModifySubaccount data:", response.data);
-
     // Modify the VCR record table.
-    modifyTable(response.data);
+    let respondData = response.data;
+
+    console.log("apiModifySubaccount subaccount:", subaccount);
+    console.log("apiModifySubaccount data:", response.data);
+    // modifyTable(response.data); // NEED TO UPDATE VCR
 
     // Return true to indicate a successful modification.
     return true;
@@ -144,7 +155,8 @@ export async function apiModifySubaccountTrue(
   api_secret,
   subaccount_key,
   name,
-  suspended
+  suspended,
+  subaccount
 ) {
   try {
     const urlModifySubaccount = `https://api.nexmo.com/accounts/${api_key}/subaccounts/${subaccount_key}`;
@@ -164,10 +176,11 @@ export async function apiModifySubaccountTrue(
       }
     );
 
+    console.log("apiModifySubaccountTrue subaccount:", subaccount);
     console.log("apiModifySubaccountTrue data:", response.data);
 
     // Modify the record in the table (used: false).
-    modifyTable(response.data, false);
+    // modifyTable(response.data, false); // NEED TO UPDATE VCR
 
     // Return true to indicate a successful modification.
     return true;
@@ -186,13 +199,18 @@ export async function apiModifySubaccountTrue(
  * @param {string} new_secret - The new API secret.
  * @returns {Promise<boolean>} - A Promise that resolves to true if successful, false otherwise.
  */
-export async function apiCreateApiSecret(api_key, api_secret, new_secret) {
+export async function apiCreateApiSecret(
+  auth_api_key,
+  auth_api_secret,
+  api_key,
+  new_secret
+) {
   try {
     console.log(`Setting password for ${api_key} to ${new_secret}`);
 
     const url = `https://api.nexmo.com/accounts/${api_key}/secrets`;
 
-    // Make a POST request to update the API secret.
+    // Make a POST request to update the API secret for the subaccount
     await axios.post(
       url,
       {
@@ -200,8 +218,8 @@ export async function apiCreateApiSecret(api_key, api_secret, new_secret) {
       },
       {
         auth: {
-          username: api_key,
-          password: api_secret,
+          username: auth_api_key,
+          password: auth_api_secret,
         },
       }
     );
@@ -283,7 +301,7 @@ export async function createPool(
   auth_api_key,
   auth_api_secret,
   name,
-  api_secret
+  new_secret
 ) {
   try {
     // Find out if the API key is in the pool and if there is a unused subaccount
@@ -299,41 +317,52 @@ export async function createPool(
         auth_api_key,
         auth_api_secret,
         name,
-        api_secret
+        new_secret
       );
     } else {
-      // IF free: true, TRY TO Update the password.
-      const pass = apiCreateApiSecret(free.api_key, free.secret, api_secret);
+      // IF free: true, TRY TO Update the password for the free subaccount.
+      console.log("apiCreateApiSecret secret:", free.secret);
+      const updatedSecret = apiCreateApiSecret(
+        auth_api_key,
+        auth_api_secret,
+        free.api_key,
+        new_secret
+      );
 
-      // IF Update secret was successfull, then
+      // IF Update secret was successfull, THEN
       // Modify the subaccount by updating the "suspended" and "name" properties.
-      if (pass) {
-        console.log("createPool Password successfully adjusted: ", pass);
-
-        const suspended = false;
-        const updated = await apiModifySubaccount(
+      if (updatedSecret) {
+        const modified = await apiModifySubaccount(
           auth_api_key,
           auth_api_secret,
           free.api_key,
           name,
-          suspended
+          false
         );
+        // apiModifySubaccount data: {
+        //   api_key: '',
+        //   primary_account_api_key: '',
+        //   use_primary_account_balance: true,
+        //   name: '',
+        //   balance: null,
+        //   credit_limit: null,
+        //   suspended: false,
+        //   created_at: ''
+        // }
 
-        console.log("createPool apiModifySubaccount response: ", updated);
+        console.log("createPool apiModifySubaccount response: ", modified);
 
-        // If updated successfully, set the subaccount details and create a VCR subaccount record
-        if (updated) {
+        // If modified successfully, set name, suspended: false and update VCR subaccount record
+        // Also set the /get-index subaccount to used: true
+        if (modified) {
+          // GOOD !
           free.name = name;
           free.suspended = false;
-          free.used = true;
-
-          createRecord(free, true);
-          console.log("createRecord true");
+          // createRecord(free, true);
+          await setTable(free);
+          await setIndexFreeUpdate(free, true); // free.used = true
+          console.log("createPool RETURN FREE: ", free);
           return free;
-        } else {
-          // If modification failed, still create a record with used set to false
-          console.log("createRecord false");
-          createRecord(free, false);
         }
       }
     }

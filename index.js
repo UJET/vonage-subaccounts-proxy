@@ -6,6 +6,9 @@ import {
   findFree,
   getTable,
   getRecord,
+  setTable,
+  setIndex,
+  setIndexFreeUpdate,
   deleteRecord,
   getIndex,
   deleteIndex,
@@ -201,17 +204,23 @@ app.get("/get-subkey/:subkey", authenticate, async (req, res) => {
 // IF subaccount is in VCR records /get-index, return
 // `recordKey ${recordKey} already exists!`
 // ELSE Return subaccount info from Nexmo GET Subaccount API and
-// then ADD a VCR Record of it, set it to used: false which updates /get-index.
+// then ADD a VCR Record of it, updates secret via Subaccounts API then updates /get-index.
 // ISSUE_HERE is it will NOT contain a signature_secret.
 // `https://api.nexmo.com/accounts/${api_key}/subaccounts/${subaccount_key}`
 app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
   try {
     const { auth_api_key, auth_api_secret } = req;
     const { subkey } = req.params;
+    const { secret } = req.body;
     const recordKey = `${auth_api_key}:${subkey}`;
     const getSubkey = await state.get(recordKey);
 
     let response;
+    if (!subkey || !secret) {
+      response = "Missing either subkey or secret!";
+      res.status(200).json(response);
+    }
+
     if (getSubkey !== null) {
       response = `recordKey ${recordKey} already exists!`;
       console.log(response);
@@ -223,9 +232,25 @@ app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
         auth_api_secret,
         subkey
       );
+
+      // TRY TO Update the password for subaccount you want to add to VCR.
+      console.log("apiCreateApiSecret set secret for :", subkey);
+      const updatedSecret = await apiCreateApiSecret(
+        auth_api_key,
+        auth_api_secret,
+        subkey,
+        secret
+      );
+
+      console.log("updatedSecret:", updatedSecret);
+
       // ADD Subaccount obj and false (suspended) to VCR data.
-      let record = await createRecord(response, response.suspended);
-      res.status(200).json(record);
+      // let record = await createRecord(response, response.suspended);
+      response.secret = secret;
+      await setTable(response);
+      await setIndex(response, response.suspended);
+
+      res.status(200).json(response);
     }
   } catch (error) {
     console.error(`Error retrieving subkey: ${error.message}`);
@@ -272,9 +297,10 @@ app.post("/set-subkey-signature/:subkey", authenticate, async (req, res) => {
   }
 });
 
+// GET FREE
 // IF all subkeys in /get-index are used: true,
 // then Create new Subaccount with signature_secret and
-// add it to VCR records.
+// add it to VCR records and set used: false; shows in /get-index
 // ELSE return a used: false from /get-index and set to used: true
 app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
   try {
@@ -366,9 +392,11 @@ app.delete(
       }
 
       const rkey = `${api_key}:${sub_key}`;
-      const sub = await getRecord(rkey);
+      const subaccount = await getRecord(rkey);
 
-      if (sub === null) {
+      console.log("SET RECORD:", subaccount);
+
+      if (subaccount === null) {
         console.error(
           "Invalid API api_key:sub_key: ",
           rkey,
@@ -381,8 +409,9 @@ app.delete(
         auth_api_key,
         auth_api_secret,
         sub_key,
-        sub.name,
-        true
+        subaccount.name,
+        true,
+        subaccount
       );
 
       if (!suspensionResult) {
