@@ -204,20 +204,19 @@ app.get("/get-subkey/:subkey", authenticate, async (req, res) => {
 // IF subaccount is in VCR records /get-index, return
 // `recordKey ${recordKey} already exists!`
 // ELSE Return subaccount info from Nexmo GET Subaccount API and
-// then ADD a VCR Record of it, updates secret via Subaccounts API then updates /get-index.
+// then ADD a VCR Record of it, set it to used: false which updates /get-index.
 // ISSUE_HERE is it will NOT contain a signature_secret.
 // `https://api.nexmo.com/accounts/${api_key}/subaccounts/${subaccount_key}`
 app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
   try {
     const { auth_api_key, auth_api_secret } = req;
     const { subkey } = req.params;
-    const { secret } = req.body;
     const recordKey = `${auth_api_key}:${subkey}`;
     const getSubkey = await state.get(recordKey);
 
     let response;
-    if (!subkey || !secret) {
-      response = "Missing either subkey or secret!";
+    if (!subkey) {
+      response = "Missing subkey!";
       res.status(200).json(response);
     }
 
@@ -233,20 +232,7 @@ app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
         subkey
       );
 
-      // TRY TO Update the password for subaccount you want to add to VCR.
-      console.log("apiCreateApiSecret set secret for :", subkey);
-      const updatedSecret = await apiCreateApiSecret(
-        auth_api_key,
-        auth_api_secret,
-        subkey,
-        secret
-      );
-
-      console.log("updatedSecret:", updatedSecret);
-
       // ADD Subaccount obj and false (suspended) to VCR data.
-      // let record = await createRecord(response, response.suspended);
-      response.secret = secret;
       await setTable(response);
       await setIndex(response, response.suspended);
 
