@@ -6,7 +6,7 @@ export async function findFree(primary_account_api_key) {
     const currentState = await state.get(primary_account_api_key);
 
     if (!currentState) {
-      console.log("findFree: Primary account not found");
+      // console.log("findFree: Primary account not found");
       return false;
     }
 
@@ -305,5 +305,38 @@ export async function modifyTable(record, used) {
     }
   } catch (error) {
     console.error(`modifyTable ERROR: ${error.message}`);
+  }
+}
+
+export async function validateSecret(secret) {
+  const errors = [];
+
+  // Check length
+  if (secret.length < 8) {
+    errors.push("The secret must be at least 8 characters long.");
+  }
+  if (secret.length > 25) {
+    errors.push("The secret must be no more than 25 characters long.");
+  }
+
+  // Check for at least one lowercase letter
+  if (!/[a-z]/.test(secret)) {
+    errors.push("The secret must contain at least one lowercase letter.");
+  }
+
+  // Check for at least one uppercase letter
+  if (!/[A-Z]/.test(secret)) {
+    errors.push("The secret must contain at least one uppercase letter.");
+  }
+
+  // Check for at least one digit
+  if (!/\d/.test(secret)) {
+    errors.push("The secret must contain at least one digit.");
+  }
+
+  if (errors.length > 0) {
+    return errors.join(" ");
+  } else {
+    return "The secret is valid.";
   }
 }

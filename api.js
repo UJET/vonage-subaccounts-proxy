@@ -288,7 +288,7 @@ export async function apiCreateSubaccount(
   }
 }
 
-/**
+/** OLD /////////////////////////////////////////////////
  * Creates a subaccount in a pool or updates an existing one.
  * @param {string} auth_api_key - The main account's API key.
  * @param {string} auth_api_secret - The main account's API secret.

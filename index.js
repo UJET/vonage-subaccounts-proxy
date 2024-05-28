@@ -1,4 +1,4 @@
-import express, { response } from "express";
+import express from "express";
 import dotenv from "dotenv";
 import { vcr } from "@vonage/vcr-sdk";
 import axios from "axios";
@@ -14,16 +14,24 @@ import {
   deleteIndex,
   createRecord,
   deleteTable,
+  modifyTable,
 } from "./helpers.js";
 import {
   apiRetrieveSubaccount,
   apiSignatureSecret,
   apiModifySubaccount,
   apiModifySubaccountTrue,
-  apiCreateApiSecret,
   apiCreateSubaccount,
   createPool,
-} from "./api.js";
+} from "./api-subaccount-mgmt.js";
+
+import {
+  apiCreateSecret,
+  apiRetrieveAllSecrets,
+  apiRevokeOneSecret,
+  findSecretById,
+  getLastSecretId,
+} from "./api-secret-mgmt.js";
 
 dotenv.config();
 
@@ -107,7 +115,6 @@ app.post("/set-mainkeys", authenticate, async (req, res) => {
 });
 
 // Retrieve the VCR record for the array of objects of the main api keys to be used for subaccounts.
-
 app.get("/get-mainkeys", authenticate, async (req, res) => {
   try {
     const { auth_api_key, auth_api_secret } = req;
@@ -173,6 +180,7 @@ app.get("/get-index/:apikey", authenticate, async (req, res) => {
   }
 });
 
+// TESTED May28th
 // IF you get, it usually means the mainKey was not set in Debug.
 // `Error retrieving subkey: ${error.message}`;
 // IF subaccount is in VCR records return the VCR subaccount object
@@ -289,12 +297,11 @@ app.post("/set-subkey-signature/:subkey", authenticate, async (req, res) => {
 // add it to VCR records and set used: false; shows in /get-index
 // ELSE return a used: false from /get-index and set to used: true
 app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
+  const { auth_api_key, auth_api_secret } = req;
+  const api_key = req.params.apikey;
+  const api_secret = req.body.secret;
+  const name = req.body.name;
   try {
-    const { auth_api_key, auth_api_secret } = req;
-    const api_key = req.params.apikey;
-    const api_secret = req.body.secret;
-    const name = req.body.name;
-
     let response;
     if (!api_secret || !name) {
       response = `Missing request body api_key: ${api_key} or api_secret: ${api_secret}`;
@@ -319,7 +326,7 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
       return res.status(404).json("Invalid API Key, not found");
     }
 
-    let newAccount = null;
+    let subaccount = null;
     // IF req.params.apikey.pool: true, then
     // find out if the API key is in the pool and if there is a unused subaccount (findFree()) then
     // if free: false, Create a new subaccount with signature secret and return subaccount object then
@@ -328,24 +335,27 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
     // ELSE response = apikey in mainkeys require pool: true
     if (mainKeyInfo.pool) {
       console.log("createPool...");
-      newAccount = await createPool(
+      subaccount = await createPool(
+        req,
+        res,
         auth_api_key,
         auth_api_secret,
         name,
         api_secret
       );
-      console.log("newAccount: ", newAccount);
-      return res.status(200).json(newAccount);
+      // console.log("subaccount: ", subaccount);
+      // return res.status(200).json(subaccount);
     } else {
       let response = "apikey in mainkeys require pool: true";
       return res.status(300).json(response);
     }
   } catch (error) {
-    console.error(`Error creating subaccount: ${error.message}`);
-    res.status(500).json("Error creating subaccount");
+    console.log(error);
+    res.status(400).json(error);
   }
 });
 
+// TESTED May28th.
 // DELETE /account/:apikey/subaccounts/:subkey LOGIC
 // IF subaccount in not in VCR /get-index,
 // then return "Invalid API api_key:sub_key"
@@ -379,9 +389,6 @@ app.delete(
 
       const rkey = `${api_key}:${sub_key}`;
       const subaccount = await getRecord(rkey);
-
-      console.log("SET RECORD:", subaccount);
-
       if (subaccount === null) {
         console.error(
           "Invalid API api_key:sub_key: ",
@@ -391,24 +398,43 @@ app.delete(
         return res.status(404).json("Invalid API api_key:sub_key");
       }
 
-      const suspensionResult = await apiModifySubaccountTrue(
-        auth_api_key,
-        auth_api_secret,
-        sub_key,
-        subaccount.name,
-        true,
-        subaccount
+      // const suspensionResult = await apiModifySubaccountTrue(
+      //   auth_api_key,
+      //   auth_api_secret,
+      //   sub_key,
+      //   subaccount.name,
+      //   true, // sets suspended: true, used: false
+      //   subaccount
+      // );
+
+      // Make a PATCH request to modify the subaccount.
+      const apiModifySubaccountResp = await axios.patch(
+        `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${sub_key}`,
+        {
+          suspended: true, // sets suspended: true, used: false
+          name: subaccount.name,
+        },
+        {
+          auth: {
+            username: auth_api_key,
+            password: auth_api_secret,
+          },
+        }
       );
+      console.log("subaccount:", subaccount); // VCR HAS SIGNATURE_SECRET
+      console.log(
+        "apiModifySubaccountResp.data:",
+        apiModifySubaccountResp.data
+      );
+      apiModifySubaccountResp.data.signature_secret =
+        subaccount.signature_secret;
+      apiModifySubaccountResp.data.secret = subaccount.secret;
 
-      if (!suspensionResult) {
-        console.error("Failed to suspend subaccount: ", sub_key);
-        return res.status(500).json("Failed to suspend subaccount");
-      }
-
-      return res.status(200).json(suspensionResult);
+      modifyTable(apiModifySubaccountResp.data, false);
+      return res.status(200).json(apiModifySubaccountResp.data);
     } catch (error) {
-      console.error(`Error deleting subaccount: ${error.message}`);
-      res.status(500).json("Error deleting subaccount");
+      console.error(`Error deleting or modifying subaccount: ${error.message}`);
+      res.status(500).json("Error deleting or modifying subaccount");
     }
   }
 );
