@@ -8,6 +8,7 @@ import {
   setTable,
   setIndex,
   setIndexFreeUpdate,
+  validateSecret,
 } from "./helpers.js";
 
 import { getFirstSecretId } from "./api-secret-mgmt.js";
@@ -184,7 +185,6 @@ export async function apiModifySubaccountTrue(
     console.log("apiModifySubaccountTrue subaccount:", subaccount); // VCR HAS SIGNATURE_SECRET
     // ADD SIGNATURE_SECRET TO VCR
     response.data.signature_secret = subaccount.signature_secret;
-    response.data.secret = subaccount.secret;
 
     // console.log("apiModifySubaccountTrue data:", response.data);
 
@@ -289,6 +289,12 @@ export async function createPool(
     } else {
       // IF free: true
       // 1. Retrieve, Create and Modify.
+      let secretValidation = await validateSecret(new_secret);
+      console.log("secretValidation:", secretValidation);
+      if (secretValidation !== "valid secret") {
+        return res.status(401).json("secret is not valid");
+      }
+
       apiRetrieveAllSecretsResp = await axios.get(
         `https://api.nexmo.com/accounts/${free.api_key}/secrets`,
         {
@@ -303,11 +309,11 @@ export async function createPool(
       // 2. Check how many secrets, if 2 then delete first, then create new secret.
       if (apiRetrieveAllSecretsResp.data._embedded.secrets.length === 2) {
         console.log("2 secrets");
-        let lastSecretId = await getFirstSecretId(
+        let firstSecretId = await getFirstSecretId(
           apiRetrieveAllSecretsResp.data
         );
         console.log("free.api_key:", free.api_key);
-        console.log("lastSecretId:", lastSecretId);
+        console.log("firstSecretId:", firstSecretId);
 
         apiRevokeOneSecretResp = await axios.delete(
           `https://api.nexmo.com/accounts/${free.api_key}/secrets/${lastSecretId}`,
@@ -322,12 +328,27 @@ export async function createPool(
         console.log("apiRevokeOneSecretResp:", apiRevokeOneSecretResp.status); // 204
         // if successfully revoked secret, then create new secret. Secret cannot be same as last.
         if (apiRevokeOneSecretResp.status === 204) {
-          let secretValidation = await validateSecret(new_secret);
-          console.log("secretValidation:", secretValidation);
+          // create, modify and set VCR used: true
+          // go ahead and use new_secreet
+          apiCreateApiSecretResp = await axios.post(
+            `https://api.nexmo.com/accounts/${free.api_key}/secrets`,
+            {
+              secret: new_secret,
+            },
+            {
+              auth: {
+                username: auth_api_key,
+                password: auth_api_secret,
+              },
+            }
+          );
 
-          // check if free.secret ==== new_secret, if so, return free, modify and set VCR used: true
-          if (free.secret === new_secret) {
-            console.log("secret is the same: ", free.secret);
+          console.log(
+            "apiCreateApiSecretResp.status:",
+            apiCreateApiSecretResp.status
+          ); // 201
+          // if successfully set new secret, then modify
+          if (apiCreateApiSecretResp.status === 201) {
             const apiModifySubaccountResp = await axios.patch(
               `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${free.api_key}`,
               {
@@ -347,11 +368,6 @@ export async function createPool(
               apiModifySubaccountResp.status
             ); // 200
 
-            // console.log(
-            //   "apiModifySubaccountResp.data:",
-            //   apiModifySubaccountResp.data
-            // );
-
             if (apiModifySubaccountResp.status === 200) {
               // GOOD !
               free.name = new_name;
@@ -359,29 +375,43 @@ export async function createPool(
               await setTable(free);
               await setIndexFreeUpdate(free, true); // set free.used = true
               console.log("createPool return free: ", free);
-              return free;
+              return res.status(200).json(free);
             }
-          } else {
-            // secret is not the same, so go ahead and use new_secreet
-            apiCreateApiSecretResp = await axios.post(
-              `https://api.nexmo.com/accounts/${free.api_key}/secrets`,
-              {
-                secret: new_secret,
+          }
+        }
+      } else if (
+        apiRetrieveAllSecretsResp.data._embedded.secrets.length === 1
+      ) {
+        console.log("1 secret");
+        // create, modify and set VCR used: true
+        // go ahead and use new_secreet
+        try {
+          apiCreateApiSecretResp = await axios.post(
+            `https://api.nexmo.com/accounts/${free.api_key}/secrets`,
+            {
+              secret: new_secret,
+            },
+            {
+              auth: {
+                username: auth_api_key,
+                password: auth_api_secret,
               },
-              {
-                auth: {
-                  username: auth_api_key,
-                  password: auth_api_secret,
-                },
-              }
-            );
+            }
+          );
 
-            console.log(
-              "apiCreateApiSecretResp.status:",
-              apiCreateApiSecretResp.status
-            ); // 201
-            // if successfully set new secret, then modify
-            if (apiCreateApiSecretResp.status === 201) {
+          console.log(
+            "apiCreateApiSecretResp.status:",
+            apiCreateApiSecretResp.status
+          ); // 201
+        } catch (error) {
+          if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error(`Error status code: ${error.response.status}`);
+
+            if (error.response.status === 400) {
+              console.error("Error details:", error.response.data);
+              // you are trying to use the same secret string
               const apiModifySubaccountResp = await axios.patch(
                 `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${free.api_key}`,
                 {
@@ -401,11 +431,6 @@ export async function createPool(
                 apiModifySubaccountResp.status
               ); // 200
 
-              // console.log(
-              //   "apiModifySubaccountResp.data:",
-              //   apiModifySubaccountResp.data
-              // );
-
               if (apiModifySubaccountResp.status === 200) {
                 // GOOD !
                 free.name = new_name;
@@ -413,56 +438,50 @@ export async function createPool(
                 await setTable(free);
                 await setIndexFreeUpdate(free, true); // set free.used = true
                 console.log("createPool return free: ", free);
-                return free;
+                return res.status(200).json(free);
               }
             }
+            // console.error("Error details:", error.response.data);
+            res.status(error.response.status).send(error.response.data);
+          } else if (error.request) {
+            // The request was made but no response was received
+            console.error("No response received:", error.request);
+            res.status(500).send("No response received from the server");
+          } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error("Error:", error.message);
+            res.status(500).send(error.message);
           }
         }
-      } else if (
-        apiRetrieveAllSecretsResp.data._embedded.secrets.length === 1
-      ) {
-        console.log("1 secret");
-        // 1. check if secret is the same as last for free.api_key
-        const recordKey = `${auth_api_key}:${free.api_key}`;
-        const getSubkey = await state.get(recordKey);
-        console.log("recordKey:", recordKey);
-        console.log("getSubkey:", getSubkey);
-        let response;
-        if (getSubkey === null) {
-          response = `Subkey not found for recordKey: ${recordKey}`;
-          console.log(response);
-        } else {
-          if (free.secret === new_secret) {
-            console.log(`secret is the same for recordKey: ${recordKey}`);
-            const apiModifySubaccountResp = await axios.patch(
-              `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${free.api_key}`,
-              {
-                suspended: !free.suspended,
-                name: new_name,
+        // if successfully set new secret, then modify
+        if (apiCreateApiSecretResp.status === 201) {
+          const apiModifySubaccountResp = await axios.patch(
+            `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${free.api_key}`,
+            {
+              suspended: free.suspended,
+              name: new_name,
+            },
+            {
+              auth: {
+                username: auth_api_key,
+                password: auth_api_secret,
               },
-              {
-                auth: {
-                  username: auth_api_key,
-                  password: auth_api_secret,
-                },
-              }
-            );
-
-            console.log(
-              "apiModifySubaccountResp.status:",
-              apiModifySubaccountResp.status
-            ); // 200
-
-            if (apiModifySubaccountResp.status === 200) {
-              // VCR
-              free.name = new_name;
-              free.suspended = false;
-              await setTable(free);
-              await setIndex(free, false); // set free.used = true
-              console.log("createPool return free: ", free);
-              return res.status(200).json(free);
             }
-            return res.status(200).json(getSubkey);
+          );
+
+          console.log(
+            "apiModifySubaccountResp.status:",
+            apiModifySubaccountResp.status
+          ); // 200
+
+          if (apiModifySubaccountResp.status === 200) {
+            // GOOD !
+            free.name = new_name;
+            free.suspended = false;
+            await setTable(free);
+            await setIndexFreeUpdate(free, true); // set free.used = true
+            console.log("createPool return free: ", free);
+            return res.status(200).json(free);
           }
         }
       } else {
@@ -487,43 +506,6 @@ export async function createPool(
           apiRetrieveAllSecretsResp.data._embedded.secrets.length
         );
       }
-
-      // IF Update secret was successfull, THEN
-      // Modify the subaccount by updating the "suspended" and "name" properties.
-      // if (true) {
-      //   const modified = await apiModifySubaccount(
-      //     auth_api_key,
-      //     auth_api_secret,
-      //     free.api_key,
-      //     name,
-      //     false
-      //   );
-      //   // apiModifySubaccount data: {
-      //   //   api_key: '',
-      //   //   primary_account_api_key: '',
-      //   //   use_primary_account_balance: true,
-      //   //   name: '',
-      //   //   balance: null,
-      //   //   credit_limit: null,
-      //   //   suspended: false,
-      //   //   created_at: ''
-      //   // }
-
-      //   console.log("createPool apiModifySubaccount response: ", modified);
-
-      //   // If modified successfully, set name, suspended: false and update VCR subaccount record
-      //   // Also set the /get-index subaccount to used: true
-      //   if (modified) {
-      //     // GOOD !
-      //     free.name = name;
-      //     free.suspended = false;
-      //     // createRecord(free, true);
-      //     await setTable(free);
-      //     await setIndexFreeUpdate(free, true); // free.used = true
-      //     console.log("createPool RETURN FREE: ", free);
-      //     return free;
-      //   }
-      // }
     }
   } catch (error) {
     console.error("Error Ping Pong....");

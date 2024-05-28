@@ -337,6 +337,6 @@ export async function validateSecret(secret) {
   if (errors.length > 0) {
     return errors.join(" ");
   } else {
-    return "The secret is valid.";
+    return "valid secret";
   }
 }
