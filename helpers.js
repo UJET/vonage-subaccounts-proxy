@@ -112,7 +112,7 @@ export async function getTable(record) {
   try {
     const recordKey = `${record.primary_account_api_key}:${record.api_key}`;
     let getRecordState = await state.get(recordKey); // null if not exist
-    console.log(`getTable > recordKey ${recordKey}`); // recordKey (apikey:subkey)
+    // console.log(`getTable > recordKey ${recordKey}`); // recordKey (apikey:subkey)
 
     if (getRecordState === null) {
       console.log(
@@ -120,39 +120,50 @@ export async function getTable(record) {
         getRecordState,
         "so it does not exist"
       );
+      return getRecordState;
     } else {
-      console.log("getTable > getRecordState: ", getRecordState);
+      console.log("getTable record exists: ", getRecordState);
+      return getRecordState;
     }
   } catch (error) {
     console.error(`getTable ERROR: ${error.message}`);
   }
 }
 
-// IF record (apikey:subkey) exists return nothing, ELSE save the record.
-export async function setTable(record) {
+export async function setTable(record, isNew) {
   try {
     const recordKey = `${record.primary_account_api_key}:${record.api_key}`;
     let getRecordState = await state.get(recordKey);
+    console.log("setTable > getRecordState:", getRecordState);
+    console.log("setTable > isNew:", isNew);
 
-    if (getRecordState) {
-      console.log("setTable > recordKey already exists");
+    // if false and false: should never happen
+    // if true and true: should never happen
+    // if true and false: Modify when DELETE called or MODIFY. WE WANT suspended: true and used: false
+    // if false and true: apiSignatureSecret called
+    if (!getRecordState && !isNew) {
+      console.error("\n\nsetTable > FALSE & FALSE");
+      return;
+    } else if (getRecordState && isNew) {
+      console.error("\n\nsetTable > TRUE & TRUE");
+      return;
+    } else if (getRecordState && !isNew) {
+      getRecordState.suspended = false;
+      let setRecordState = await state.set(recordKey, getRecordState);
+      console.log("\n\nsetTable > EXISTS");
+      return;
+    } else if (!getRecordState && isNew) {
+      let setRecordState = await state.set(recordKey, record);
+      console.log(
+        "\n\nsetTable > SAVING RECORD:",
+        setRecordState,
+        "record:",
+        record
+      );
       return;
     } else {
-      let setRecordState = await state.set(recordKey, record);
-      console.log("SAVED RECORD:", record);
-      // SAVED RECORD: {
-      //   api_key: '332ccb38',
-      //   secret: 'example-4PI-secret',
-      //   primary_account_api_key: '89b7a9b7',
-      //   use_primary_account_balance: true,
-      //   name: 'Vonage - Mark',
-      //   balance: null,
-      //   credit_limit: null,
-      //   suspended: false,
-      //   created_at: '2024-05-24T01:43:08.419Z',
-      //   signature_secret: 'LdDVG5jn4FGmtia8UwZm6J6Oi6cI1B1lXNEsEdlXS24MgMZXxq'
-      // }
-      return setRecordState;
+      console.error("\n\nsetTable > OTHER CONDITION");
+      return;
     }
   } catch (error) {
     console.error(`setTable ERROR: ${error.message}`);
@@ -201,6 +212,7 @@ export async function setIndex(record, used) {
   }
 }
 
+// record, true
 export async function setIndexFreeUpdate(record, used) {
   try {
     let getMainState = await state.get(record.primary_account_api_key);
@@ -274,6 +286,7 @@ export async function modifyTable(record, used) {
       );
 
       let getRecordState = await state.get(recordKey);
+      // getRecordState.used = used;
       console.log("modifyTable:", getRecordState);
 
       if (used === false) {

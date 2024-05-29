@@ -334,7 +334,6 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
 
     // ELSE response = apikey in mainkeys require pool: true
     if (mainKeyInfo.pool) {
-      console.log("createPool...");
       subaccount = await createPool(
         req,
         res,
@@ -344,7 +343,7 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
         api_secret
       );
       // console.log("subaccount: ", subaccount);
-      // return res.status(200).json(subaccount);
+      return res.status(200).json(subaccount);
     } else {
       let response = "apikey in mainkeys require pool: true";
       return res.status(300).json(response);
