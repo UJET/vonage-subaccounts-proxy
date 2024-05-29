@@ -475,6 +475,7 @@ export async function createPool(
                 // if we successfully set modified subaccount name & suspended (used: true), then update VCR.
                 if (apiModifySubaccountResp.status === 200) {
                   // We grab the free subaccount and modify VCR to show it's in use now.
+                  free.secret = new_secret;
                   free.name = new_name;
                   free.suspended = false;
                   let isNew = false;
@@ -546,6 +547,7 @@ export async function createPool(
 
             if (apiModifySubaccountResp.status === 200) {
               // We grab the free subaccount and modify VCR to show it's in use now.
+              free.secret = new_secret;
               free.name = new_name;
               free.suspended = false;
               let isNew = false;
@@ -610,6 +612,7 @@ export async function createPool(
 
               if (apiModifySubaccountResp.status === 200) {
                 // We grab the free subaccount and modify VCR to show it's in use now.
+                free.secret = new_secret;
                 free.name = new_name;
                 free.suspended = false;
                 let isNew = false;
@@ -653,7 +656,7 @@ export async function createPool(
           ); // 200
 
           if (apiModifySubaccountResp.status === 200) {
-            // GOOD !
+            free.secret = new_secret;
             free.name = new_name;
             free.suspended = false;
             await setTable(free);
