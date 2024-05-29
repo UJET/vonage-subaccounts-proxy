@@ -2,36 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import { vcr } from "@vonage/vcr-sdk";
 import axios from "axios";
-import {
-  findFree,
-  getTable,
-  getRecord,
-  setTable,
-  setIndex,
-  setIndexFreeUpdate,
-  deleteRecord,
-  getIndex,
-  deleteIndex,
-  createRecord,
-  deleteTable,
-  modifyTable,
-} from "./helpers.js";
-import {
-  apiRetrieveSubaccount,
-  apiSignatureSecret,
-  apiModifySubaccount,
-  apiModifySubaccountTrue,
-  apiCreateSubaccount,
-  createPool,
-} from "./api-subaccount-mgmt.js";
-
-import {
-  apiCreateSecret,
-  apiRetrieveAllSecrets,
-  apiRevokeOneSecret,
-  findSecretById,
-  getLastSecretId,
-} from "./api-secret-mgmt.js";
+import { getRecord, setTable, setIndex, modifyTable } from "./helpers.js";
+import { apiRetrieveSubaccount, createPool } from "./api-subaccount-mgmt.js";
 
 dotenv.config();
 
@@ -354,7 +326,6 @@ app.post("/account/:apikey/subaccounts", authenticate, async (req, res) => {
   }
 });
 
-// TESTED May28th.
 // DELETE /account/:apikey/subaccounts/:subkey LOGIC
 // IF subaccount in not in VCR /get-index,
 // then return "Invalid API api_key:sub_key"

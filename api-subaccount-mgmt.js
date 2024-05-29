@@ -198,6 +198,7 @@ export async function apiModifySubaccountTrue(
     console.log("apiModifySubaccountTrue subaccount:", subaccount); // VCR HAS SIGNATURE_SECRET
     // ADD SIGNATURE_SECRET TO VCR
     response.data.signature_secret = subaccount.signature_secret;
+    response.data.secret = subaccount.secret;
 
     // console.log("apiModifySubaccountTrue data:", response.data);
 
