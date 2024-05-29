@@ -213,7 +213,8 @@ app.post("/set-subkey/:subkey", authenticate, async (req, res) => {
       );
 
       // ADD Subaccount obj and false (suspended) to VCR data.
-      await setTable(response);
+      let isNew = true;
+      await setTable(response, isNew);
       await setIndex(response, response.suspended);
 
       res.status(200).json(response);
