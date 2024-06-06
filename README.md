@@ -1,9 +1,5 @@
 # Vonage Subaccounts API Management Proxy
 
-ISSUES:
-/get-subkey still shows "suspended": true after we use GET FREE route. It should have been set
-to suspended: false, just like modify api does.
-
 This project provides a Node.js-based server for managing subaccounts in the Vonage Subaccounts API. It offers a set of API endpoints to create, modify, and delete subaccounts (suspend: true), as well as manage their attributes.
 
 > DISCLAIMER: The Proxy needs to be deployed (vcr deploy) for the new Subaccounts with signature_secret to be stored in VCR Instance State.

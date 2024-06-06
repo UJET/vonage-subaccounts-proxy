@@ -98,9 +98,8 @@ export async function createRecord(record, used) {
 export async function getRecord(recordKey) {
   try {
     let getRecordState = await state.get(recordKey); // null if not exist
-    console.log(
-      `getRecord recordKey ${recordKey}, ${getRecordState} - recordKey does not exist`
-    ); // recordKey (apikey:subkey)
+    console.log(`\ngetRecord recordKey ${recordKey}`); // recordKey (apikey:subkey)
+    console.log(getRecordState, ": recordKey does not exist.");
     return getRecordState;
   } catch (error) {
     console.error(`getRecord ERROR: ${error.message}`);
@@ -273,6 +272,27 @@ export async function deleteIndex(record) {
   }
 }
 
+// Used by apiModifySubaccount if 200.
+export async function modifyRecord(
+  record,
+  new_secret,
+  new_name,
+  isSuspended,
+  isNew,
+  isUsed
+) {
+  record.secret = new_secret;
+  record.name = new_name;
+  record.suspended = isSuspended;
+  // updates record for subaccount /get-subaccount
+  await setTable(record, isNew);
+  // updates /get-index
+  await setIndexFreeUpdate(record, isUsed); // set record.used = true
+  console.log("createPool return record: ", record);
+  return record;
+}
+
+// DELETE calls this with record, false.
 export async function modifyTable(record, used) {
   const recordKey = `${record.primary_account_api_key}:${record.api_key}`;
   try {
