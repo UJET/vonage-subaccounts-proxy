@@ -98,7 +98,11 @@ router.post("/set-subkey/:subkey", authenticate, async (req, res) => {
       // ADD Subaccount obj and false (suspended) to VCR data.
       let isNew = true;
       await setTable(response, isNew);
-      await setIndex(response, response.suspended);
+      // Flip Boolean
+      // IF suspended: true SET used: false;
+      // IF suspended: false SET used: true;
+      let isSuspended = response.suspended;
+      await setIndex(response, !isSuspended);
 
       res.status(200).json(response);
     }
@@ -215,6 +219,7 @@ router.delete(
   authenticate,
   async (req, res) => {
     try {
+      console.log("\n", "*".repeat(50));
       console.time("\nDELETE Total Execution Time");
       const { auth_api_key, auth_api_secret } = req;
       const api_key = req.params.apikey;

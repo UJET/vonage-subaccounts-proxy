@@ -1,11 +1,5 @@
 import axios from "axios";
-import {
-  findFree,
-  modifyRecord,
-  setTable,
-  setIndex,
-  validateSecret,
-} from "./vcr-state-mgmt.js";
+import { findFree, modifyRecord, validateSecret } from "./vcr-state-mgmt.js";
 
 import {
   getFirstSecretId,
@@ -136,10 +130,10 @@ export async function createPool(
     apiRetrieveAllSecretsResp,
     apiRevokeOneSecretResp,
     apiModifySubaccountResp;
-  console.time("\nFIND FREE");
+  // console.time("\nFIND FREE");
   // Find out if the API key is in the pool and if there is a unused subaccount
   const free = await findFree(auth_api_key);
-  console.timeEnd("\nFIND FREE");
+  // console.timeEnd("\nFIND FREE");
   console.log("\n\n", "*".repeat(50), "\ncreatePool > findFree:", free);
 
   try {
@@ -207,8 +201,7 @@ export async function createPool(
         }
       }
     } else {
-      // IF free: true
-      // Retrieve, Create and Modify.
+      // IF free: true then Create Secret and Modify Subaccount
       console.time("\nvalidateSecret");
       let secretValidation = await validateSecret(new_secret);
       console.log("secretValidation:", secretValidation);
@@ -234,46 +227,41 @@ export async function createPool(
         ); // 201
         console.timeEnd("API Call apiCreateSecret");
 
-        // if successfully set new secret, then modify
-        if (apiCreateApiSecretResp.status === 201) {
-          console.time("API Call apiModifySubaccount");
-          let suspended = false;
-          apiModifySubaccountResp = await apiModifySubaccount(
-            auth_api_key,
-            auth_api_secret,
-            free.api_key,
+        console.time("API Call apiModifySubaccount 1");
+        let suspended = false;
+        apiModifySubaccountResp = await apiModifySubaccount(
+          auth_api_key,
+          auth_api_secret,
+          free.api_key,
+          new_name,
+          suspended
+        );
+
+        console.log(
+          "apiModifySubaccountResp.status:",
+          apiModifySubaccountResp.status
+        ); // 200
+        console.timeEnd("API Call apiModifySubaccount 1");
+
+        // We grab the free subaccount and modify VCR to show it's in use now.
+        try {
+          console.time("VCR modifyRecord");
+          let isSuspended = false;
+          let isNew = false;
+          let isUsed = true;
+          let record = await modifyRecord(
+            free,
+            new_secret,
             new_name,
-            suspended
+            isSuspended,
+            isNew,
+            isUsed
           );
-
-          console.log(
-            "apiModifySubaccountResp.status:",
-            apiModifySubaccountResp.status
-          ); // 200
-          console.timeEnd("API Call apiModifySubaccount");
-
-          if (apiModifySubaccountResp.status === 200) {
-            // We grab the free subaccount and modify VCR to show it's in use now.
-            try {
-              console.time("VCR modifyRecord");
-              let isSuspended = false;
-              let isNew = false;
-              let isUsed = true;
-              let record = await modifyRecord(
-                free,
-                new_secret,
-                new_name,
-                isSuspended,
-                isNew,
-                isUsed
-              );
-              console.timeEnd("VCR modifyRecord");
-              return record;
-            } catch (error) {
-              console.error("modifyRecord ERROR:", error);
-              return error;
-            }
-          }
+          console.timeEnd("VCR modifyRecord");
+          return record;
+        } catch (error) {
+          console.error("modifyRecord ERROR:", error);
+          return error;
         }
       } catch (error) {
         if (error.response) {
@@ -281,13 +269,18 @@ export async function createPool(
             `apiCreateApiSecretResp Error status code: ${error.response.status}`
           );
 
-          if (error.response.status === 400) {
+          if (error.response.status === 400 || error.response.status === 403) {
+            // 400 means we are trying to use the same secret for subaccount.
+            // "reason": "Does not meet complexity requirements"
             console.error(
               "apiCreateApiSecretResp Error details:",
               error.response.data
             );
-            // 400 means we are trying to use the same secret for subaccount.
-            console.time("API Call apiModifySubaccount");
+
+            // 403
+            // "detail": "Attempted to update a more recent version of the account",
+
+            console.time("API Call apiModifySubaccount Catch");
 
             let suspended = false;
             apiModifySubaccountResp = await apiModifySubaccount(
@@ -302,7 +295,7 @@ export async function createPool(
               "apiModifySubaccountResp.status:",
               apiModifySubaccountResp.status
             ); // 200
-            console.timeEnd("API Call apiModifySubaccount");
+            console.timeEnd("API Call apiModifySubaccount Catch");
 
             if (apiModifySubaccountResp.status === 200) {
               try {
@@ -328,13 +321,6 @@ export async function createPool(
             }
           }
 
-          if (error.response.status === 403) {
-            // means we have 2 secrets
-            console.error(
-              "apiCreateApiSecretResp Error details:",
-              error.response.data
-            );
-          }
           res.status(error.response.status).send(error.response.data);
         } else if (error.request) {
           console.error(

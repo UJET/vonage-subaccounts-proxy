@@ -20,6 +20,38 @@ If apikey is one of the mainkeys:
   - Add it to the Pool (mainkey pool Index) and set that main apikey's subaccount apikey to used: true (see Postman Request GET get-index)
   - Return that subaccount info which also includes signature_secret.
 
+## Vonage Secret Management API
+
+At this time, the limit for secret per apikey is 2. If you try to Create Secret API when 2 already exists, a 404 is returned with message.
+
+```js
+{
+    "type": "https://developer.nexmo.com/api-errors/account/secret-management#validation",
+    "title": "Bad Request",
+    "detail": "The request failed due to secret validation errors",
+    "instance": "",
+    "invalid_parameters": [
+        {
+            "name": "secret",
+            "reason": "Does not meet complexity requirements"
+        }
+    ]
+}
+```
+
+For this reason, when calling DELETE route (/account/:apikey/subaccounts/:subkey), if 2 secrets exists, it will delete one secret, so that you can call GET FREE route (/account/:apikey/subaccounts).
+
+If you try to Create Secret API using the same secret string, then a error 403 will be returned with message:
+
+```js
+{
+  type: 'https://developer.nexmo.com/api-errors/account/subaccounts#validation',
+  title: 'Outdated account',
+  detail: 'Attempted to update a more recent version of the account',
+  instance: ''
+}
+```
+
 ## Features
 
 - **Create Subaccounts**: The Proxy server creats new subaccounts when all are being used. 

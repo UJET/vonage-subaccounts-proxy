@@ -1,12 +1,6 @@
 import express from "express";
 import { authenticate } from "../middleware/authenticate.js";
 import { vcr } from "@vonage/vcr-sdk";
-import {
-  getRecord,
-  setTable,
-  setIndex,
-  modifyTable,
-} from "../vcr-state-mgmt.js";
 
 const router = express.Router();
 const state = vcr.getInstanceState();
