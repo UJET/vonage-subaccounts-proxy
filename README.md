@@ -1,14 +1,14 @@
 # Vonage Subaccounts API Management Proxy
 
-This project provides a Node.js-based server for managing subaccounts in the Vonage Subaccounts API. It offers a set of API endpoints to create, modify, and delete subaccounts (suspend: true), as well as manage their attributes.
+This project provides a Node.js-based server for managing subaccounts using the Vonage Subaccounts API and Vonage Secrets API. It offers a set of API endpoints to create, modify, and delete subaccounts (suspend: true), as well as modifying Secrets for the subaccounts.
 
 > DISCLAIMER: The Proxy needs to be deployed (vcr deploy) for the new Subaccounts with signature_secret to be stored in VCR Instance State.
 
 ## Proxy Logic
 
-If apikey is not one of the mainkeys, then proxy request to Create Sub Account API and return newly created subaccount data including signature_secret (as returned in Create Sub Account response).
+If apikey is not one of the mainkeys, then proxy request to Create Sub Account API and return newly created subaccount data including signature_secret.
 
-If apikey is one of the mainkeys:
+If a main apikey is one of the mainkeys:
 
 - If there is any free subaccount (suspended: true and used: false) in Pool (mainkey pool Index)
 
@@ -39,7 +39,7 @@ At this time, the limit for secret per apikey is 2. If you try to Create Secret 
 }
 ```
 
-For this reason, when calling DELETE route (/account/:apikey/subaccounts/:subkey), if 2 secrets exists, it will delete one secret, so that you can call GET FREE route (/account/:apikey/subaccounts).
+For this reason, when calling DELETE route (/account/:apikey/subaccounts/:subkey) to suspend a subaccount (suspended: true and used: false), it will retrieve all the secrets for that subaccount, if 2 secrets exists, it will delete one secret, so that when you call GET FREE route (/account/:apikey/subaccounts) it will be available in the pool.
 
 If you try to Create Secret API using the same secret string, then a error 403 will be returned with message:
 
@@ -54,29 +54,43 @@ If you try to Create Secret API using the same secret string, then a error 403 w
 
 ## Features
 
-- **Create Subaccounts**: The Proxy server creats new subaccounts when all are being used. 
+- **Pool Management**: Subaccounts can be managed in a pool, allowing for efficient utilization and modification of existing subaccounts.
+
+- **Create Subaccounts**: The Proxy server creats new subaccounts when all are being used.
 
 - **Modify Subaccount Attributes**: It provides functionality to update subaccount attributes such as name and suspended status.
 
 - **Generate Signature Secrets**: The Proxy server can generate signature secrets for subaccounts when it is created to provide enhanced security. This occurs when no subaccounts are available.
 
-- **Pool Management**: Subaccounts can be managed in a pool, allowing for efficient utilization and modification of existing subaccounts.
+
 
 - **Add Subaccount Signature Secret to the VCR Subaccount Record**: It provides functionality to add subaccount signature_secret attribute via /set-subkey-signature/:subkey route.
 
 ## Files
 
-### `index.js`
+### `vcr-state-mgmt.js`
 
-This is the main server file responsible for handling HTTP requests and responses.
+Contains [Vonage Cloud Runtime](https://developer.vonage.com/en/vcr/overview?source=vcr) State Functions to get and set objects for mainkeys and subaccounts.
 
-### `helpers.js`
+### `api-secret-mgmt.js`
 
-Contains utility functions for managing data and making API calls via [Vonage Cloud Runtime](https://developer.vonage.com/en/vcr/overview?source=vcr) State Functions.
+Handles API interactions with the Vonage Secrets API.
 
-### `api.js`
+### `routes/main-keys.js`
+
+Proxy routes to set and get mainKeys.
+
+### `routes/subaccount.js`
+
+Proxy routes to set and get subaccounts.
+
+### `api-subaccount-mgmt.js`
 
 Handles API interactions with the Vonage Subaccounts API.
+
+### `vonage-subaccounts-proxy.postman_collection.json`
+
+Contains Postman Collection to make requests to VCR Proxy.
 
 ## Routes
 
@@ -110,39 +124,17 @@ Retrieves information for a specific subaccount based on the provided subkey and
 
 ### `POST /account/:apikey/subaccounts`
 
-Creates a new subaccount under the provided API key. Expects JSON payload with name and secret.
+This is the GET FREE Proxy Request that either creates a new subaccount with the provided API key or finds an unused subaccount in Pool. Expects JSON payload with name and secret to modify the unused subaccount.
 
 ### `DELETE /account/:apikey/subaccounts/:subkey`
 
-Deletes a subaccount (suspend: true) under the provided API key and subkey while also freeing up the VCR subaccount record (used: false).
+Deletes a subaccount (suspend: true) under the provided API key and subkey while also freeing up the VCR subaccount record (used: false). Since there is a limit of 2 secrets per apikey, a request will be made to delete one secret if two exists.
 
 > Upon Request to DELETE route `/account/:apikey/subaccounts/:subkey`, if the subaccount does not exist in the VCR State: Then you need to manually add it via route `set-subkey`.
 
-## API Calls
-
-### `apiSignatureSecret(auth_api_key, auth_api_secret, name, secret)`
-
-Generates a signature secret for a new subaccount.
-
-### `apiModifySubaccount(auth_api_key, auth_api_secret, api_key, name, secret)`
-
-Modifies an existing subaccount's properties.
-
-### `apiModifySubaccountTrue(auth_api_key, auth_api_secret, api_key, name, secret)`
-
-Sets a subaccount to "suspended".
-
-### `apiCreateApiSecret(auth_api_key, auth_api_secret, api_key)`
-
-Creates a new API secret.
-
-### `apiCreateSubaccount(auth_api_key, auth_api_secret, name, secret)`
-
-Creates a new subaccount.
-
 ## Installation
 
-Enable Vonage Cloud Runtime (VCR) for your Vonage Dashboard
+Since Vonage Cloud Runtime (VCR) is in beta, you'll need to enable VCR for your Vonage Dashboard.
 
 You can either run this project locally or use the VCR Online IDE.
 
@@ -152,9 +144,9 @@ Go to the [VCR online IDE](https://developer.vonage.com/en/cloud-runtime/workspa
 
 Click on Create Workspace. Import the public GitHub repository `https://github.com/nexmo-se/vonage-subaccounts-proxy.git`. Enter a workspace name e.g. vonage-subaccounts-proxy.
 
-The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name. 
+The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name.
 
-OPTION 2: 
+OPTION 2:
 
 Setup your local environment by [installing the VCR CLI](https://developer.vonage.com/en/vcr/getting-started/working-locally?source=vcr). Choose OS specific.
 
@@ -162,15 +154,15 @@ To connect the Vonage Application we will run the following commands. Just like 
 
 ```js
 // At the IDE Terminal, we will update the VCR version. If an update exists, opt for yes
-neru version
+vcr version
 // Initialize the project via
-neru init
+vcr init
 // enter a project name, usally the same name as previously. eg. vonage-subaccounts-proxy
 // Select the Vonage App with the same name. Node16 and select the closest region to you.
 // e.g. AWS - US Virginia - (aws.use1) and then any Instance Name e.g. ide and Skip the Template generation since we have have our own source code already.
 ```
 
-Now at the root directory you will notice that a `neru.yml` file was generated. Currently, there is a bug and we will need to add the lines below. Please see the sample file `neru-sample.yml` as a reference.
+Now at the root directory you will notice that a `vcr.yml` file was generated. Currently, there is a bug and we will need to add the lines below. Please see the sample file `vcr-sample.yml` as a reference.
 
 ```js
 entrypoint: [node, index.js];
@@ -178,7 +170,7 @@ debug: name: debug;
 entrypoint: [nodemon, --inspect, index.js];
 ```
 
-Your `neru.yml` should look similiar to.
+Your `vcr.yml` should look similiar to.
 
 ```js
 project:
@@ -205,7 +197,7 @@ You will notice in the terminal your VCR Instance URL. Copy this and we'll use i
 
 ```js
 // VCR_URL example
-Application Host: https://neru-APIKEY-debug-INSTANCE_NAME.REGION.runtime.vonage.cloud
+Application Host: https://vcr-APIKEY-debug-INSTANCE_NAME.REGION.runtime.vonage.cloud
 ```
 
 ## Running the Proxy Demo
