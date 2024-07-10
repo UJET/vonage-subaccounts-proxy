@@ -214,13 +214,13 @@ Use the Postman requests to set your mainkeys via POST set-mainkey and GET get-m
 // At Postman Request POST set-mainkey, set your Main API Keys for the accounts you want to use to "pool": true
 [
   {
-    name: "Google OEM Demo (current)",
+    name: "OEM Demo (current)",
     apikey: "AAAAA",
     pool: true,
     max: 10000,
   },
   {
-    name: "Google OEM Demo (next)",
+    name: "OEM Demo (next)",
     apikey: "BBBBB",
     pool: true,
     max: 10000,
