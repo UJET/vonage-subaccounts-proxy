@@ -90,6 +90,12 @@ export async function apiModifySubaccount(
   new_name,
   suspended
 ) {
+  // Function to introduce a delay to allow preceding api call (create secret or delete secret) to propagate.
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Add a 1/2-second delay
+  await delay(500);
+
   const url = `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${subaccount_key}`;
 
   const response = await axios.patch(
