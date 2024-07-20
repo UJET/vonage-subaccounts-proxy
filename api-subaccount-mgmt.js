@@ -90,12 +90,6 @@ export async function apiModifySubaccount(
   new_name,
   suspended
 ) {
-  // Function to introduce a delay to allow preceding api call (create secret or delete secret) to propagate.
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  // Add a 1/2-second delay
-  await delay(500);
-
   const url = `https://api.nexmo.com/accounts/${auth_api_key}/subaccounts/${subaccount_key}`;
 
   const response = await axios.patch(
@@ -235,18 +229,52 @@ export async function createPool(
 
         console.time("API Call apiModifySubaccount 1");
         let suspended = false;
-        apiModifySubaccountResp = await apiModifySubaccount(
-          auth_api_key,
-          auth_api_secret,
-          free.api_key,
-          new_name,
-          suspended
-        );
+        try {
+          apiModifySubaccountResp = await apiModifySubaccount(
+            auth_api_key,
+            auth_api_secret,
+            free.api_key,
+            new_name,
+            suspended
+          );
 
-        console.log(
-          "apiModifySubaccountResp.status:",
-          apiModifySubaccountResp.status
-        ); // 200
+          console.log(
+            "\nATTEMPT 1: apiModifySubaccountResp.status:",
+            apiModifySubaccountResp.status
+          ); // 200
+        } catch (error) {
+          if (error.response.status === 403) {
+            console.log(
+              "Error on 1st attempt to Modify Subaccount. Trying 2rd attempt..."
+            );
+            const delay = (ms) =>
+              new Promise((resolve) => setTimeout(resolve, ms));
+
+            // Add a 1/2-second delay
+            await delay(500);
+
+            apiModifySubaccountResp = await apiModifySubaccount(
+              auth_api_key,
+              auth_api_secret,
+              free.api_key,
+              new_name,
+              suspended
+            );
+            console.log(
+              "\nATTEMPT 2: apiModifySubaccountResp.status:",
+              apiModifySubaccountResp.status
+            );
+            console.log(
+              "apiModifySubaccountResp.statusText:",
+              apiModifySubaccountResp.statusText
+            );
+          } else {
+            console.log(
+              "Other Error on 1nd attempt to Modify Subaccount:",
+              error.response.status
+            );
+          }
+        }
         console.timeEnd("API Call apiModifySubaccount 1");
 
         // We grab the free subaccount and modify VCR to show it's in use now.
@@ -287,7 +315,11 @@ export async function createPool(
             // "detail": "Attempted to update a more recent version of the account",
 
             console.time("API Call apiModifySubaccount Catch");
+            const delay = (ms) =>
+              new Promise((resolve) => setTimeout(resolve, ms));
 
+            // Add a 1/2-second delay
+            await delay(500);
             let suspended = false;
             apiModifySubaccountResp = await apiModifySubaccount(
               auth_api_key,
