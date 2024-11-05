@@ -1,11 +1,10 @@
 import axios from "axios";
-import { findFree, modifyRecord, validateSecret } from "./vcr-state-mgmt.js";
+import { findFree, modifyRecord } from "./vcr-state-mgmt.js";
 
 import {
-  getFirstSecretId,
   apiCreateSecret,
-  apiRetrieveAllSecrets,
-  apiRevokeOneSecret,
+  apiRetrieveAllSecretsRevokeOneSecret,
+  validateSecret,
 } from "./api-secret-mgmt.js";
 
 /**
@@ -202,10 +201,7 @@ export async function createPool(
       }
     } else {
       // IF free: true then Create Secret and Modify Subaccount
-      console.time("\nvalidateSecret");
       let secretValidation = await validateSecret(new_secret);
-      console.log("secretValidation:", secretValidation);
-      console.timeEnd("\nvalidateSecret");
       if (secretValidation !== "valid secret") {
         return "secret is not valid";
       }
@@ -226,7 +222,36 @@ export async function createPool(
           apiCreateApiSecretResp.status
         ); // 201
         console.timeEnd("API Call apiCreateSecret");
+      } catch (error) {
+        console.error(
+          `apiCreateApiSecretResp Error: ${error.response.status}`
+        );
 
+        if (error.response.status === 400 || error.response.status === 403) {
+          // 400 means we are trying to use the same secret for subaccount or not complex enough.
+          // 403 "detail": "Account reached maximum number [2] of allowed secrets"
+          await apiRetrieveAllSecretsRevokeOneSecret(
+            auth_api_key,
+            auth_api_secret,
+            free.api_key
+          );
+
+          apiCreateApiSecretResp = await apiCreateSecret(
+            auth_api_key,
+            auth_api_secret,
+            free.api_key,
+            new_secret
+          );
+
+          console.log(
+            "retried apiCreateApiSecretResp.status:",
+            apiCreateApiSecretResp.status
+          ); // 201
+          console.timeEnd("API Call apiCreateSecret");
+        }
+      }
+
+      try {
         console.time("API Call apiModifySubaccount 1");
         let suspended = false;
         try {
@@ -299,21 +324,7 @@ export async function createPool(
         }
       } catch (error) {
         if (error.response) {
-          console.error(
-            `apiCreateApiSecretResp Error status code: ${error.response.status}`
-          );
-
           if (error.response.status === 400 || error.response.status === 403) {
-            // 400 means we are trying to use the same secret for subaccount.
-            // "reason": "Does not meet complexity requirements"
-            console.error(
-              "apiCreateApiSecretResp Error details:",
-              error.response.data
-            );
-
-            // 403
-            // "detail": "Attempted to update a more recent version of the account",
-
             console.time("API Call apiModifySubaccount Catch");
             const delay = (ms) =>
               new Promise((resolve) => setTimeout(resolve, ms));
@@ -385,107 +396,6 @@ export async function createPool(
       return "CreatePool No response received from the server";
     } else {
       console.error("CreatePool Error:", error.message);
-      return error.message;
-    }
-  }
-}
-// Used by DELETE route
-export async function apiRetrieveAllSecretsRevokeOneSecret(
-  auth_api_key,
-  auth_api_secret,
-  sub_key
-) {
-  try {
-    console.time("API Call apiRetrieveAllSecrets");
-    let apiRetrieveAllSecretsResp = await apiRetrieveAllSecrets(
-      auth_api_key,
-      auth_api_secret,
-      sub_key
-    );
-
-    console.log("apiRetrieveAllSecretsResp:", apiRetrieveAllSecretsResp.data);
-    console.timeEnd("API Call apiRetrieveAllSecrets");
-
-    // Check how many secrets, if 2 then delete first, create new secret, then modify subaccount to suspended: false.
-    if (apiRetrieveAllSecretsResp.data._embedded.secrets.length === 2) {
-      console.log("\n\n2 secrets");
-      console.time("\ngetFirstSecretId");
-      let firstSecretId = await getFirstSecretId(
-        apiRetrieveAllSecretsResp.data
-      );
-      console.timeEnd("\ngetFirstSecretId");
-      console.log("firstSecretId:", firstSecretId);
-
-      // If 2 secrets exists, then revoke first one via apiRevokeOneSecretResp
-      try {
-        console.time("API Call apiRevokeOneSecret");
-        let apiRevokeOneSecretResp = await apiRevokeOneSecret(
-          auth_api_key,
-          auth_api_secret,
-          sub_key,
-          firstSecretId
-        );
-
-        console.log(
-          "apiRevokeOneSecretResp.status:",
-          apiRevokeOneSecretResp.status
-        ); // 204
-        console.timeEnd("API Call apiRevokeOneSecret");
-        return apiRevokeOneSecretResp;
-      } catch (error) {
-        console.log("apiRevokeOneSecretResp ERROR:", error);
-        if (error.response) {
-          console.error(
-            `apiRevokeOneSecretResp Error status code: ${error.response.status}`
-          );
-          if (error.response.status === 400) {
-            console.error(
-              "apiRevokeOneSecretResp Error details:",
-              error.response.data
-            );
-          }
-
-          return error.response.data;
-        } else if (error.request) {
-          console.error(
-            "apiRevokeOneSecretResp No response received:",
-            error.request
-          );
-          return "apiRevokeOneSecretResp No response received from the server";
-        } else {
-          console.error("apiRevokeOneSecretResp error:", error.message);
-          return error.message;
-        }
-      }
-    } else if (apiRetrieveAllSecretsResp.data._embedded.secrets.length === 1) {
-      console.log("\n\n1 secret");
-      return;
-    } else {
-      console.log("\n\nother secrets");
-      return;
-    }
-  } catch (error) {
-    console.log("apiRetrieveAllSecretsResp ERROR:", error);
-    if (error.response) {
-      console.error(
-        `apiRetrieveAllSecretsResp Error status code: ${error.response.status}`
-      );
-      if (error.response.status === 400) {
-        console.error(
-          "apiRetrieveAllSecretsResp Error details:",
-          error.response.data
-        );
-      }
-
-      return error.response.data;
-    } else if (error.request) {
-      console.error(
-        "apiRetrieveAllSecretsResp No response received:",
-        error.request
-      );
-      return "apiRetrieveAllSecretsResp No response received from the server";
-    } else {
-      console.error("apiRetrieveAllSecretsResp error:", error.message);
       return error.message;
     }
   }

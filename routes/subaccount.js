@@ -5,14 +5,17 @@ import {
   getRecord,
   setTable,
   setIndex,
+  resetIndex,
   modifyTable,
 } from "../vcr-state-mgmt.js";
 import {
   apiRetrieveSubaccount,
   apiModifySubaccount,
   createPool,
-  apiRetrieveAllSecretsRevokeOneSecret,
 } from "../api-subaccount-mgmt.js";
+import {
+  apiRetrieveAllSecretsRevokeOneSecret,
+} from "../api-secret-mgmt.js";
 const router = express.Router();
 const state = vcr.getInstanceState();
 
@@ -104,6 +107,34 @@ router.post("/set-subkey/:subkey", authenticate, async (req, res) => {
       let isSuspended = response.suspended;
       await setIndex(response, !isSuspended);
 
+      res.status(200).json(response);
+    }
+  } catch (error) {
+    console.error(`Error retrieving subkey: ${error.message}`);
+    res.status(500).json("Error retrieving subkey");
+  }
+});
+
+router.post("/reset-subkey/:subkey", authenticate, async (req, res) => {
+  try {
+    const { auth_api_key, auth_api_secret } = req;
+    const { subkey } = req.params;
+
+    let response;
+    if (!subkey) {
+      response = "Missing subkey!";
+      res.status(200).json(response);
+    }
+    
+    const recordKey = `${auth_api_key}:${subkey}`;
+    response = await getRecord(recordKey);
+
+    if (response == null) {
+      response = `recordKey ${recordKey} doesn't exist!`;
+      console.log(response);
+      res.status(200).json(response);
+    } else {
+      await resetIndex(response);
       res.status(200).json(response);
     }
   } catch (error) {
