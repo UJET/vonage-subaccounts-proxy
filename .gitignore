@@ -6,6 +6,7 @@ response.js
 README-small.md
 README copy.md
 neru.yml
+vcr.yml
 *.env
 /dev
 
