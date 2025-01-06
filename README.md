@@ -144,7 +144,7 @@ OPTION 1:
 
 Go to the [VCR online IDE](https://developer.vonage.com/en/cloud-runtime/workspaces). Make sure you are Signed in.
 
-Click on Create Workspace. Import the public GitHub repository `https://github.com/nexmo-se/vonage-subaccounts-proxy.git`. Enter a workspace name e.g. vonage-subaccounts-proxy.
+Click on Create Workspace. Import the public GitHub repository `https://github.com/UJET/vonage-subaccounts-proxy.git`. Enter a workspace name e.g. vonage-subaccounts-proxy.
 
 The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name.
 
