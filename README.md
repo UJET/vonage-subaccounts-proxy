@@ -140,7 +140,7 @@ Since Vonage Cloud Runtime (VCR) is in beta, you'll need to enable VCR for your 
 
 You can either run this project locally or use the VCR Online IDE.
 
-OPTION 1:
+OPTION 1 (Use this one):
 
 Go to the [VCR online IDE](https://developer.vonage.com/en/cloud-runtime/workspaces). Make sure you are Signed in.
 
@@ -148,15 +148,15 @@ Click on Create Workspace. Import the public GitHub repository `https://github.c
 
 The VCR IDE should now be loaded and a newly created Vonage Application will appear at the Vonage Dashboard Applications with the same name.
 
-OPTION 2:
+OPTION 2 (I have not tried this):
 
 Setup your local environment by [installing the VCR CLI](https://developer.vonage.com/en/vcr/getting-started/working-locally?source=vcr). Choose OS specific.
+
+After completing option 1 or 1:
 
 To connect the Vonage Application we will run the following commands. Just like VS Code, you can drag the hidden terminal below to view it. Run the following commands:
 
 ```js
-// At the IDE Terminal, we will update the VCR version. If an update exists, opt for yes
-vcr version
 // Initialize the project via
 vcr init
 // enter a project name, usally the same name as previously. eg. vonage-subaccounts-proxy
