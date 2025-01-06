@@ -152,7 +152,7 @@ OPTION 2 (I have not tried this):
 
 Setup your local environment by [installing the VCR CLI](https://developer.vonage.com/en/vcr/getting-started/working-locally?source=vcr). Choose OS specific.
 
-After completing option 1 or 1:
+After completing option 1 or 2:
 
 To connect the Vonage Application we will run the following commands. Just like VS Code, you can drag the hidden terminal below to view it. Run the following commands:
 
